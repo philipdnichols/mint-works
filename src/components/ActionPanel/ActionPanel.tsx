@@ -45,11 +45,17 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
     if (!selectedSpace || selectedSpace.occupiedBy) {
       setSelection(initialSelection);
     }
-  }, [availableLocations, selection.locationId, selection.spaceIndex, state.locations]);
+  }, [
+    availableLocations,
+    selection.locationId,
+    selection.spaceIndex,
+    setSelection,
+    state.locations,
+  ]);
 
   useEffect(() => {
     setSelection(initialSelection);
-  }, [state.currentPlayerIndex, state.phase]);
+  }, [setSelection, state.currentPlayerIndex, state.phase]);
 
   if (state.status !== 'playing') {
     return (
@@ -143,11 +149,11 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
     : null;
   const canPlace = Boolean(
     selectedLocation &&
-      selectedSpaceOpen &&
-      effect &&
-      cost !== null &&
-      selectedSpaceIndex >= 0 &&
-      cost <= player.mints,
+    selectedSpaceOpen &&
+    effect &&
+    cost !== null &&
+    selectedSpaceIndex >= 0 &&
+    cost <= player.mints,
   );
   const placeHint = getPlaceHint(
     state,

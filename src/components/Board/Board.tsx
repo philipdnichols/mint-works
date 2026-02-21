@@ -40,7 +40,9 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
         <h3>Locations</h3>
         <div className="locations">
           {state.locations.map((location) => {
-            const ownerName = location.ownerId ? nameMap.get(location.ownerId) ?? location.ownerId : null;
+            const ownerName = location.ownerId
+              ? (nameMap.get(location.ownerId) ?? location.ownerId)
+              : null;
             const isLocked = state.lockedLocations.includes(location.id);
             return (
               <LocationCard
@@ -105,10 +107,11 @@ function LocationCard({
       {deedHint && <div className="location__hint">{deedHint}</div>}
       <div className="location__spaces">
         {location.spaces.map((space, index) => {
-          const occupantName = space.occupiedBy ? nameMap.get(space.occupiedBy) ?? space.occupiedBy : '';
+          const occupantName = space.occupiedBy
+            ? (nameMap.get(space.occupiedBy) ?? space.occupiedBy)
+            : '';
           const costLabel = formatCost(space.cost);
-          const isSelected =
-            selection.locationId === location.id && selection.spaceIndex === index;
+          const isSelected = selection.locationId === location.id && selection.spaceIndex === index;
           const isAvailable = canSelectLocation && !space.occupiedBy;
           const label = `${location.name} space ${index + 1} (${costLabel})${
             space.occupiedBy ? ` occupied by ${occupantName}` : ' available'
@@ -127,9 +130,7 @@ function LocationCard({
             >
               <span className="space__index">#{index + 1}</span>
               <span className="space__cost">{costLabel}</span>
-              <span className="space__occupant">
-                {space.occupiedBy ? occupantName : 'Open'}
-              </span>
+              <span className="space__occupant">{space.occupiedBy ? occupantName : 'Open'}</span>
               <span className="space__mints">{space.mints} mint(s)</span>
             </button>
           );

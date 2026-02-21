@@ -118,14 +118,10 @@ function PlayerCard({
                     Cost: {plan.cost} | Tag: {plan.tag}
                   </div>
                   {building.storedMints > 0 && (
-                    <div className="player__detail-row">
-                      Stored mints: {building.storedMints}
-                    </div>
+                    <div className="player__detail-row">Stored mints: {building.storedMints}</div>
                   )}
                   <div className="player__detail-row">Effect: {getPlanEffect(building.planId)}</div>
-                  <div className="player__detail-row">
-                    Stars now: {breakdown.total}
-                  </div>
+                  <div className="player__detail-row">Stars now: {breakdown.total}</div>
                   <div className="player__detail-row">
                     Base: {breakdown.base} ({breakdown.baseLabel})
                   </div>

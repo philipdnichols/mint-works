@@ -110,7 +110,9 @@ export function startGame(settings: GameSettings, deckOrder: ReadonlyArray<PlanI
 
   const playerNames = players.map((player) => player.name).join(', ');
   const advancedNames =
-    locations.filter((location) => location.type === 'advanced').map((location) => location.name)
+    locations
+      .filter((location) => location.type === 'advanced')
+      .map((location) => location.name)
       .join(', ') || 'None';
   const startName = players.find((p) => p.id === startingPlayerId)?.name ?? startingPlayerId;
 

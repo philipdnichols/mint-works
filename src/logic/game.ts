@@ -10,7 +10,12 @@ import type {
   UpkeepEffect,
 } from '../types/game';
 import type { NonTempPlaceEffect, PlacePayload } from '../state/actions';
-import { aiAvoidsProduction, aiSkipsSupplierWithPlans, getAiCostPriority, getAiTypePriority } from './ai';
+import {
+  aiAvoidsProduction,
+  aiSkipsSupplierWithPlans,
+  getAiCostPriority,
+  getAiTypePriority,
+} from './ai';
 import { appendLog } from './log';
 import {
   countCultureBuildings,
@@ -1387,11 +1392,7 @@ function logAiActionDetails(
 
   if (effect.kind === 'temp-agency') {
     const targetName = locationName(nextState, effect.targetLocationId);
-    nextState = logEvent(
-      nextState,
-      'ai',
-      `${player.name} targets ${targetName} with Temp Agency.`,
-    );
+    nextState = logEvent(nextState, 'ai', `${player.name} targets ${targetName} with Temp Agency.`);
     if (effect.effect.kind === 'supplier') {
       nextState = logEvent(nextState, 'ai', describeAiSupplierPriority(player));
       nextState = logEvent(
