@@ -1,4 +1,5 @@
-import type { GameState, LocationCost, LocationId, LocationState } from '../../types/game';
+import { useEffect, useRef, useState } from 'react';
+import type { GameState, LocationCost, LocationId, LocationState, PlanId } from '../../types/game';
 import { getPlanDefinition, getPlanEffect, getPlanStarInfo } from '../../logic/plans';
 import type { SelectionState } from '../ActionPanel/selection';
 
@@ -11,6 +12,35 @@ interface BoardProps {
 
 export function Board({ state, selection, selectionEnabled, onSelectSpace }: BoardProps) {
   const nameMap = new Map<string, string>(state.players.map((player) => [player.id, player.name]));
+  const [replenishedPlanIds, setReplenishedPlanIds] = useState<ReadonlyArray<PlanId>>([]);
+  const previousSupplyRef = useRef<ReadonlyArray<PlanId>>(state.planSupply);
+  const refillTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const previousSupply = previousSupplyRef.current;
+    const previousSet = new Set(previousSupply);
+    const addedPlans = state.planSupply.filter((planId) => !previousSet.has(planId));
+
+    if (addedPlans.length > 0) {
+      setReplenishedPlanIds(addedPlans);
+      if (refillTimerRef.current !== null) {
+        window.clearTimeout(refillTimerRef.current);
+      }
+      refillTimerRef.current = window.setTimeout(() => {
+        setReplenishedPlanIds([]);
+      }, 1200);
+    }
+
+    previousSupplyRef.current = state.planSupply;
+  }, [state.planSupply]);
+
+  useEffect(() => {
+    return () => {
+      if (refillTimerRef.current !== null) {
+        window.clearTimeout(refillTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <section className="board">
@@ -24,7 +54,10 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
             const starRule = starInfo.hint ?? 'Printed stars.';
             const effect = getPlanEffect(planId);
             return (
-              <div key={planId} className="card">
+              <div
+                key={planId}
+                className={`card${replenishedPlanIds.includes(planId) ? ' card--replenished' : ''}`}
+              >
                 <div className="card__title">{plan.name}</div>
                 <div className="card__meta" title={starInfo.hint ?? undefined}>
                   Cost: {plan.cost} | Stars: {starInfo.label}

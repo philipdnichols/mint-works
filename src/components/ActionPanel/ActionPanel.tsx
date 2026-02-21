@@ -212,7 +212,7 @@ export function ActionPanel({
       <h3>{player.name}'s Turn</h3>
       {interactionDisabled && (
         <div className="panel__hint panel__hint--warning">
-          AI recap open. Close it to continue your turn.
+          Recap open. Close it to continue your turn.
         </div>
       )}
       <div className="panel__row panel__row--between">
