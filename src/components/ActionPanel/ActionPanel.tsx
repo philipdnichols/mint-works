@@ -4,7 +4,7 @@ import type { GameAction, NonTempPlaceEffect, PlaceEffect } from '../../state/ac
 import type { GameState, LocationId, LocationState, PlanId, PlayerState } from '../../types/game';
 import { getAiProfile } from '../../logic/ai';
 import { getPlanDefinition } from '../../logic/plans';
-import { getLocationCost, getTempAgencyCost } from '../../logic/game';
+import { getLocationCost, getTempAgencyCost, getTempAgencyTargets } from '../../logic/game';
 import type { SelectionState } from './selection';
 import { initialSelection } from './selection';
 
@@ -36,6 +36,8 @@ export function ActionPanel({
     [state.locations, state.lockedLocations],
   );
 
+  const tempAgencyTargets = useMemo(() => getTempAgencyTargets(state), [state]);
+
   useEffect(() => {
     if (!selection.locationId) return;
     const location = state.locations.find((loc) => loc.id === selection.locationId);
@@ -59,6 +61,21 @@ export function ActionPanel({
     setSelection,
     state.locations,
   ]);
+
+  useEffect(() => {
+    if (!selection.tempTargetLocationId) return;
+    if (tempAgencyTargets.some((loc) => loc.id === selection.tempTargetLocationId)) return;
+    setSelection((current) => ({
+      ...current,
+      tempTargetLocationId: '',
+      tempSupplierPlanId: '',
+      tempBuilderPlanId: '',
+      tempRecyclePlanId: '',
+      tempRecycleFrom: 'plan',
+      tempSwapGiveId: '',
+      tempSwapTakeId: '',
+    }));
+  }, [selection.tempTargetLocationId, setSelection, tempAgencyTargets]);
 
   useEffect(() => {
     setSelection(initialSelection);
@@ -391,15 +408,11 @@ export function ActionPanel({
               }
             >
               <option value="">Select target...</option>
-              {state.locations
-                .filter(
-                  (loc) => loc.id !== 'temp-agency' && loc.spaces.some((space) => space.occupiedBy),
-                )
-                .map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
+              {tempAgencyTargets.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
             </select>
           </label>
 
@@ -657,6 +670,7 @@ function buildTempEffect(
 
 function hydrateTempEffect(effect: PlaceEffect | null, state: GameState): PlaceEffect | null {
   if (!effect || effect.kind !== 'temp-agency') return effect;
+  if (state.lockedLocations.includes(effect.targetLocationId)) return null;
   const target = state.locations.find((loc) => loc.id === effect.targetLocationId);
   const targetSpaceIndex = target?.spaces.findIndex((space) => space.occupiedBy) ?? -1;
   if (targetSpaceIndex < 0) return null;
@@ -727,14 +741,15 @@ function getPlaceHint(
           ? { text: 'The plan supply is empty.' }
           : { text: 'Choose a card to give and a plan to take.' };
       case 'temp-agency': {
-        const occupiedTargets = state.locations.filter(
-          (loc) => loc.id !== 'temp-agency' && loc.spaces.some((space) => space.occupiedBy),
-        );
+        const occupiedTargets = getTempAgencyTargets(state);
         if (occupiedTargets.length === 0) {
           return { text: 'No occupied locations to target.' };
         }
         if (!selection.tempTargetLocationId) {
           return { text: 'Choose a target occupied location.' };
+        }
+        if (state.lockedLocations.includes(selection.tempTargetLocationId)) {
+          return { text: 'That target location is locked.', tone: 'warning' };
         }
         return { text: 'Choose a plan/card for the copied effect.' };
       }

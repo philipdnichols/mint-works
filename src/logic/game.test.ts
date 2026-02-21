@@ -15,6 +15,7 @@ import {
   getLocationCost,
   getSupplierCostForPlayer,
   getTempAgencyCost,
+  getTempAgencyTargets,
   resolveCoopChoice,
   runAiTurn,
 } from './game';
@@ -535,6 +536,20 @@ describe('game logic', () => {
       },
     });
     expect(invalid.lastError).toBeTruthy();
+  });
+
+  it('filters temp agency targets to occupied unlocked locations', () => {
+    const deck = buildDeck();
+    let state = startGame({ ...baseSettings(), advancedLocations: ['temp-agency'] as const }, deck);
+    state = updateLocation(state, 'producer', (location) => occupySpace(location, 0, 'p1', 1));
+    state = updateLocation(state, 'builder', (location) => occupySpace(location, 0, 'p1', 1));
+    state = updateLocation(state, 'temp-agency', (location) => occupySpace(location, 0, 'p2', 1));
+    state = { ...state, lockedLocations: ['producer'] };
+
+    const targets = getTempAgencyTargets(state).map((location) => location.id);
+    expect(targets).toContain('builder');
+    expect(targets).not.toContain('producer');
+    expect(targets).not.toContain('temp-agency');
   });
 
   it('reports invalid placements', () => {

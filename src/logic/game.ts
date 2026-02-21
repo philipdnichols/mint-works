@@ -1487,3 +1487,12 @@ export function getTempAgencyCost(
   if (targetCost === null) return null;
   return 1 + targetCost;
 }
+
+export function getTempAgencyTargets(state: GameState): LocationState[] {
+  return state.locations.filter(
+    (location) =>
+      location.id !== 'temp-agency' &&
+      !state.lockedLocations.includes(location.id) &&
+      location.spaces.some((space) => space.occupiedBy),
+  );
+}
