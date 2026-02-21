@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import type { GameLogEntry, Phase } from '../../types/game';
 
 interface GameLogProps {
@@ -6,12 +5,6 @@ interface GameLogProps {
 }
 
 export function GameLog({ log }: GameLogProps) {
-  const endRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [log.length]);
-
   return (
     <section className="panel log">
       <h3>Game Log</h3>
@@ -27,7 +20,6 @@ export function GameLog({ log }: GameLogProps) {
               <div className="log__text">{entry.text}</div>
             </div>
           ))}
-          <div ref={endRef} />
         </div>
       )}
     </section>
