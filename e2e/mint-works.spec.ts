@@ -59,6 +59,10 @@ function playerCard(page: import('@playwright/test').Page, name: string) {
   return page.locator('.player').filter({ has: page.getByRole('heading', { name }) });
 }
 
+function actionPanel(page: import('@playwright/test').Page) {
+  return page.locator('.sidebar .panel').first();
+}
+
 async function selectLocationSpace(
   page: import('@playwright/test').Page,
   locationName: string,
@@ -142,7 +146,7 @@ test.describe('Mint Works!', () => {
 
     await selectLocationSpace(page, 'Temp Agency');
     await page.getByLabel('Target occupied location').selectOption('Producer');
-    await expect(page.getByText('Cost: 2 mint(s)')).toBeVisible();
+    await expect(actionPanel(page).getByText('Cost: 2 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');
@@ -177,7 +181,7 @@ test.describe('Mint Works!', () => {
     await selectLocationSpace(page, 'Temp Agency');
     await page.getByLabel('Target occupied location').selectOption('Supplier');
     await page.getByLabel('Plan to gain').selectOption('Truck ($2)');
-    await expect(page.getByText('Cost: 3 mint(s)')).toBeVisible();
+    await expect(actionPanel(page).getByText('Cost: 3 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');
@@ -214,7 +218,7 @@ test.describe('Mint Works!', () => {
     await selectLocationSpace(page, 'Temp Agency');
     await page.getByLabel('Target occupied location').selectOption('Builder');
     await page.getByLabel('Plan to build').selectOption('Workshop ($3)');
-    await expect(page.getByText('Cost: 3 mint(s)')).toBeVisible();
+    await expect(actionPanel(page).getByText('Cost: 3 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');
@@ -269,7 +273,7 @@ test.describe('Mint Works!', () => {
     await selectLocationSpace(page, 'Swap Meet');
     await page.getByLabel('Give').selectOption('Plan: Truck ($2)');
     await page.getByLabel('Take').selectOption('Crane ($2)');
-    await expect(page.getByText('Cost: 2 mint(s)')).toBeVisible();
+    await expect(actionPanel(page).getByText('Cost: 2 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');
@@ -299,7 +303,7 @@ test.describe('Mint Works!', () => {
 
     await selectLocationSpace(page, 'Recycler');
     await page.getByLabel('Recycle card').selectOption('Plan: Truck ($2)');
-    await expect(page.getByText('Cost: 1 mint(s)')).toBeVisible();
+    await expect(actionPanel(page).getByText('Cost: 1 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');
@@ -330,7 +334,7 @@ test.describe('Mint Works!', () => {
 
     await selectLocationSpace(page, 'Recycler');
     await page.getByLabel('Recycle card').selectOption('Building: Workshop ($3)');
-    await expect(page.getByText('Cost: 1 mint(s)')).toBeVisible();
+    await expect(actionPanel(page).getByText('Cost: 1 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');

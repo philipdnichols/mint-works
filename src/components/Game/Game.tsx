@@ -8,6 +8,7 @@ import { Board } from '../Board/Board';
 import { PlayerList } from '../PlayerList/PlayerList';
 import { ActionPanel } from '../ActionPanel/ActionPanel';
 import { GameLog } from '../GameLog/GameLog';
+import { NeighborhoodSummary } from '../NeighborhoodSummary/NeighborhoodSummary';
 import { initialSelection } from '../ActionPanel/selection';
 
 interface GameProps {
@@ -17,10 +18,12 @@ interface GameProps {
 
 export const Game = memo(function Game({ state, dispatch }: GameProps) {
   const [selection, setSelection] = useState(initialSelection);
+  const [aiPlaybackActive, setAiPlaybackActive] = useState(false);
 
   useEffect(() => {
     if (state.status === 'idle') {
       setSelection(initialSelection);
+      setAiPlaybackActive(false);
     }
   }, [state.status]);
 
@@ -28,7 +31,8 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
     state.status === 'playing' &&
     state.phase === 'development' &&
     state.pendingChoice === null &&
-    state.players[state.currentPlayerIndex]?.type === 'human';
+    state.players[state.currentPlayerIndex]?.type === 'human' &&
+    !aiPlaybackActive;
 
   const handleSelectSpace = (locationId: LocationId, spaceIndex: number) => {
     setSelection({ ...initialSelection, locationId, spaceIndex });
@@ -56,8 +60,10 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
                   dispatch={dispatch}
                   selection={selection}
                   setSelection={setSelection}
+                  interactionDisabled={aiPlaybackActive}
                 />
-                <GameLog log={state.log} />
+                <NeighborhoodSummary state={state} />
+                <GameLog log={state.log} onPlaybackChange={setAiPlaybackActive} />
               </div>
             </div>
             <PlayerList state={state} />

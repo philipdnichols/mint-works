@@ -5,6 +5,7 @@ import type { AdvancedLocationId, AiId, PlayerCount } from '../../types/game';
 import { createSeededRng, shuffleWithRng } from '../../logic/random';
 import { getAllPlanIds } from '../../logic/setup';
 import { getAdvancedLocationConfigs } from '../../logic/locations';
+import { getAiProfile } from '../../logic/ai';
 
 interface SetupProps {
   dispatch: Dispatch<GameAction>;
@@ -24,6 +25,7 @@ export function Setup({ dispatch }: SetupProps) {
   const [aiId, setAiId] = useState<AiId>('justin');
   const [advancedEnabled, setAdvancedEnabled] = useState(true);
   const planSupplySize = soloMode ? 2 : 3;
+  const aiProfile = useMemo(() => getAiProfile(aiId), [aiId]);
 
   const advancedConfigs = useMemo(() => getAdvancedLocationConfigs(), []);
   const advancedIds = useMemo(
@@ -108,16 +110,37 @@ export function Setup({ dispatch }: SetupProps) {
       )}
 
       {soloMode && (
-        <label className="setup__row">
-          AI opponent
-          <select value={aiId} onChange={(event) => setAiId(event.target.value as AiId)}>
-            {AI_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <>
+          <label className="setup__row">
+            AI opponent
+            <select value={aiId} onChange={(event) => setAiId(event.target.value as AiId)}>
+              {AI_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {aiProfile && (
+            <div className="setup__ai panel__ai">
+              <div className="panel__ai-title">{aiProfile.title}</div>
+              <div className="panel__ai-meta">Starting mints: {aiProfile.startingMints}</div>
+              <div className="panel__ai-meta">
+                Supplier priority: {aiProfile.costPriority === 'high' ? 'Highest' : 'Lowest'} cost,
+                then {aiProfile.typePriority.join(' > ')}.
+              </div>
+              <div className="panel__ai-meta">Behavior:</div>
+              <ul className="panel__ai-list">
+                {aiProfile.traits.map((trait) => (
+                  <li key={trait}>{trait}</li>
+                ))}
+              </ul>
+              <p className="panel__note">
+                AI chooses between locations in board order (top to bottom).
+              </p>
+            </div>
+          )}
+        </>
       )}
 
       <label className="setup__row">

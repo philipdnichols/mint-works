@@ -137,6 +137,10 @@ body {
   margin-top: -4px;
 }
 
+.setup__ai {
+  align-self: flex-start;
+}
+
 .setup__button {
   align-self: flex-start;
   background: #1f2a24;
@@ -159,6 +163,12 @@ body {
   padding: 16px;
   border-radius: 12px;
   box-shadow: inset 0 0 0 1px #e0d2bd;
+}
+
+.board__hint {
+  font-size: 12px;
+  color: #6b5f4c;
+  margin: -4px 0 8px;
 }
 
 .plan-supply {
@@ -231,6 +241,25 @@ body {
   gap: 8px;
 }
 
+.location__header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.location__order {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b5f4c;
+  border: 1px solid #e4d8c5;
+  background: #fbf7ef;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
 .location__meta {
   font-size: 13px;
   color: #5b5345;
@@ -243,6 +272,12 @@ body {
 }
 
 .location__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b5f4c;
+}
+
+.location__owner {
   margin-top: 6px;
   font-size: 12px;
   color: #6b5f4c;
@@ -288,6 +323,44 @@ body {
 
 .space__index {
   font-weight: 700;
+}
+
+.space__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.space__row--meta {
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.space__cost-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1f2a24;
+  background: #f2c14e;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.space__chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3f3526;
+  background: #fffdf6;
+  border: 1px solid #e4d8c5;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.space__chip--taken {
+  color: #7b2c12;
+  border-color: #d7b39a;
+  background: #fff4ea;
 }
 
 .space__cost {
@@ -417,6 +490,52 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.neighborhoods {
+  gap: 8px;
+}
+
+.neighborhoods__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.neighborhoods__row {
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid #e4d8c5;
+  background: #fffdf6;
+}
+
+.neighborhoods__row--current {
+  border-color: #1f2a24;
+  box-shadow: 0 0 0 1px rgba(31, 42, 36, 0.1);
+}
+
+.neighborhoods__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.neighborhoods__badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1f2a24;
+  background: #f2c14e;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.neighborhoods__stats {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #5b5345;
 }
 
 .players__grid {
@@ -560,17 +679,23 @@ body {
 }
 
 .log {
-  max-height: 360px;
-  overflow: hidden;
+  flex: 1;
+  min-height: 320px;
 }
 
 .log__list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 300px;
+  max-height: 55vh;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.log__status {
+  font-size: 12px;
+  color: #7b2c12;
+  font-weight: 600;
 }
 
 .log__entry {

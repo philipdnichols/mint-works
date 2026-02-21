@@ -13,9 +13,16 @@ interface ActionPanelProps {
   dispatch: Dispatch<GameAction>;
   selection: SelectionState;
   setSelection: Dispatch<SetStateAction<SelectionState>>;
+  interactionDisabled: boolean;
 }
 
-export function ActionPanel({ state, dispatch, selection, setSelection }: ActionPanelProps) {
+export function ActionPanel({
+  state,
+  dispatch,
+  selection,
+  setSelection,
+  interactionDisabled,
+}: ActionPanelProps) {
   const player = state.players[state.currentPlayerIndex];
 
   const availableLocations = useMemo(
@@ -76,6 +83,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             <button
               key={option.id}
               type="button"
+              disabled={interactionDisabled}
               onClick={() =>
                 dispatch({
                   type: 'RESOLVE_COOP_TARGET',
@@ -126,7 +134,11 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             </ul>
           </div>
         )}
-        <button type="button" onClick={() => dispatch({ type: 'RUN_AI_TURN' })}>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'RUN_AI_TURN' })}
+          disabled={interactionDisabled}
+        >
           Run AI Turn
         </button>
       </section>
@@ -181,6 +193,11 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
   return (
     <section className="panel">
       <h3>{player.name}'s Turn</h3>
+      {interactionDisabled && (
+        <div className="panel__hint panel__hint--warning">
+          AI turn playback in progress. Controls will return shortly.
+        </div>
+      )}
       <div className="panel__row panel__row--between">
         <div className="panel__selection">
           <span className="panel__label">Selected spot</span>
@@ -194,6 +211,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
           <button
             type="button"
             className="panel__ghost"
+            disabled={interactionDisabled}
             onClick={() => setSelection(initialSelection)}
           >
             Clear
@@ -214,6 +232,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
           Plan to gain
           <select
             value={selection.supplierPlanId}
+            disabled={interactionDisabled}
             onChange={(event) =>
               setSelection((current) => ({
                 ...current,
@@ -236,6 +255,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
           Plan to build
           <select
             value={selection.builderPlanId}
+            disabled={interactionDisabled}
             onChange={(event) =>
               setSelection((current) => ({
                 ...current,
@@ -259,6 +279,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             Recycle card
             <select
               value={selection.recyclePlanId}
+              disabled={interactionDisabled}
               onChange={(event) =>
                 setSelection((current) => {
                   const value = event.target.value as PlanId;
@@ -288,6 +309,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             From
             <select
               value={selection.recycleFrom}
+              disabled={interactionDisabled}
               onChange={(event) =>
                 setSelection((current) => ({
                   ...current,
@@ -308,6 +330,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             Give
             <select
               value={selection.swapGiveId}
+              disabled={interactionDisabled}
               onChange={(event) =>
                 setSelection((current) => ({
                   ...current,
@@ -332,6 +355,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             Take
             <select
               value={selection.swapTakeId}
+              disabled={interactionDisabled}
               onChange={(event) =>
                 setSelection((current) => ({
                   ...current,
@@ -358,6 +382,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
             Target occupied location
             <select
               value={selection.tempTargetLocationId}
+              disabled={interactionDisabled}
               onChange={(event) =>
                 setSelection((current) => ({
                   ...current,
@@ -383,6 +408,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
               Plan to gain
               <select
                 value={selection.tempSupplierPlanId}
+                disabled={interactionDisabled}
                 onChange={(event) =>
                   setSelection((current) => ({
                     ...current,
@@ -405,6 +431,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
               Plan to build
               <select
                 value={selection.tempBuilderPlanId}
+                disabled={interactionDisabled}
                 onChange={(event) =>
                   setSelection((current) => ({
                     ...current,
@@ -428,6 +455,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
                 Recycle card
                 <select
                   value={selection.tempRecyclePlanId}
+                  disabled={interactionDisabled}
                   onChange={(event) =>
                     setSelection((current) => {
                       const value = event.target.value as PlanId;
@@ -457,6 +485,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
                 From
                 <select
                   value={selection.tempRecycleFrom}
+                  disabled={interactionDisabled}
                   onChange={(event) =>
                     setSelection((current) => ({
                       ...current,
@@ -477,6 +506,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
                 Give
                 <select
                   value={selection.tempSwapGiveId}
+                  disabled={interactionDisabled}
                   onChange={(event) =>
                     setSelection((current) => ({
                       ...current,
@@ -501,6 +531,7 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
                 Take
                 <select
                   value={selection.tempSwapTakeId}
+                  disabled={interactionDisabled}
                   onChange={(event) =>
                     setSelection((current) => ({
                       ...current,
@@ -532,10 +563,14 @@ export function ActionPanel({ state, dispatch, selection, setSelection }: Action
       )}
 
       <div className="panel__row">
-        <button type="button" onClick={handlePlace} disabled={!canPlace}>
+        <button type="button" onClick={handlePlace} disabled={interactionDisabled || !canPlace}>
           Place Mint
         </button>
-        <button type="button" onClick={() => dispatch({ type: 'PASS_TURN' })}>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'PASS_TURN' })}
+          disabled={interactionDisabled}
+        >
           Pass
         </button>
       </div>

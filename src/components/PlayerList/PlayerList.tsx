@@ -16,7 +16,7 @@ interface PlayerListProps {
 
 export function PlayerList({ state }: PlayerListProps) {
   return (
-    <section className="players">
+    <section className="players" id="neighborhoods">
       <h3>Neighborhoods</h3>
       <div className="players__grid">
         {state.players.map((player) => (

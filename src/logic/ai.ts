@@ -16,7 +16,10 @@ const AI_PROFILES: Record<AiId, AiProfile> = {
     name: 'Justin',
     title: 'The Game Designer',
     startingMints: 3,
-    traits: ['Locks the last used location until the next Development phase.'],
+    traits: [
+      'Starts with the Starting Player token.',
+      'Locks the last used location until the next Development phase.',
+    ],
     costPriority: 'low',
     typePriority: ['Utility', 'Deed', 'Production', 'Culture'],
   },

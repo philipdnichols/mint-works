@@ -1,5 +1,5 @@
 import type { GameState, LocationCost, LocationId, LocationState } from '../../types/game';
-import { getPlanDefinition, getPlanStarInfo } from '../../logic/plans';
+import { getPlanDefinition, getPlanEffect, getPlanStarInfo } from '../../logic/plans';
 import type { SelectionState } from '../ActionPanel/selection';
 
 interface BoardProps {
@@ -21,13 +21,16 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
           {state.planSupply.map((planId) => {
             const plan = getPlanDefinition(planId);
             const starInfo = getPlanStarInfo(planId);
+            const starRule = starInfo.hint ?? 'Printed stars.';
+            const effect = getPlanEffect(planId);
             return (
               <div key={planId} className="card">
                 <div className="card__title">{plan.name}</div>
                 <div className="card__meta" title={starInfo.hint ?? undefined}>
                   Cost: {plan.cost} | Stars: {starInfo.label}
                 </div>
-                {starInfo.hint && <div className="card__hint">{starInfo.hint}</div>}
+                <div className="card__hint">Star rule: {starRule}</div>
+                <div className="card__hint">Effect: {effect}</div>
                 <div className="card__tag">{plan.tag}</div>
               </div>
             );
@@ -38,8 +41,11 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
 
       <div className="board__section">
         <h3>Locations</h3>
+        {state.settings?.soloMode && (
+          <p className="board__hint">AI evaluates locations in board order (1 is highest).</p>
+        )}
         <div className="locations">
-          {state.locations.map((location) => {
+          {state.locations.map((location, index) => {
             const ownerName = location.ownerId
               ? (nameMap.get(location.ownerId) ?? location.ownerId)
               : null;
@@ -47,6 +53,7 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
             return (
               <LocationCard
                 key={location.id}
+                orderIndex={index}
                 location={location}
                 ownerName={ownerName}
                 isLocked={isLocked}
@@ -64,6 +71,7 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
 }
 
 function LocationCard({
+  orderIndex,
   location,
   ownerName,
   isLocked,
@@ -72,6 +80,7 @@ function LocationCard({
   onSelectSpace,
   nameMap,
 }: {
+  orderIndex: number;
   location: LocationState;
   ownerName: string | null;
   isLocked: boolean;
@@ -80,10 +89,9 @@ function LocationCard({
   onSelectSpace: (locationId: LocationId, spaceIndex: number) => void;
   nameMap: Map<string, string>;
 }) {
-  const occupied = location.spaces.filter((space) => space.occupiedBy).length;
-  const totalMints = location.spaces.reduce((sum, space) => sum + space.mints, 0);
   const effectText = getLocationEffectText(location);
   const deedHint = getDeedHint(location);
+  const deedOwnerEffect = getDeedOwnerEffectText(location);
   const isClosed = location.type === 'deed' && !location.isOpen;
   const canSelectLocation = selectionEnabled && !isLocked && !isClosed;
 
@@ -91,20 +99,20 @@ function LocationCard({
     <div className={`location location--${location.type} ${isLocked ? 'location--locked' : ''}`}>
       <div className="location__header">
         <h4>{location.name}</h4>
-        {isLocked && <span className="badge">Locked</span>}
-        {location.type === 'deed' && !location.isOpen && !isLocked && (
-          <span className="badge">Closed</span>
-        )}
-        {location.type === 'deed' && location.isOpen && (
-          <span className="badge">Owner: {ownerName ?? 'None'}</span>
-        )}
+        <div className="location__header-meta">
+          <span className="location__order">#{orderIndex + 1}</span>
+          {isLocked && <span className="badge">Locked</span>}
+          {location.type === 'deed' && !location.isOpen && !isLocked && (
+            <span className="badge">Closed</span>
+          )}
+          {location.type === 'deed' && location.isOpen && (
+            <span className="badge">Owner: {ownerName ?? 'None'}</span>
+          )}
+        </div>
       </div>
-      <div className="location__meta">
-        Spaces: {occupied}/{location.spaces.length}
-      </div>
-      <div className="location__meta">Mints on location: {totalMints}</div>
       <div className="location__effect">{effectText}</div>
       {deedHint && <div className="location__hint">{deedHint}</div>}
+      {deedOwnerEffect && <div className="location__owner">{deedOwnerEffect}</div>}
       <div className="location__spaces">
         {location.spaces.map((space, index) => {
           const occupantName = space.occupiedBy
@@ -116,6 +124,7 @@ function LocationCard({
           const label = `${location.name} space ${index + 1} (${costLabel})${
             space.occupiedBy ? ` occupied by ${occupantName}` : ' available'
           }`;
+          const statusLabel = space.occupiedBy ? `Taken by ${occupantName}` : 'Open';
 
           return (
             <button
@@ -128,10 +137,16 @@ function LocationCard({
               disabled={!isAvailable}
               aria-label={label}
             >
-              <span className="space__index">#{index + 1}</span>
-              <span className="space__cost">{costLabel}</span>
-              <span className="space__occupant">{space.occupiedBy ? occupantName : 'Open'}</span>
-              <span className="space__mints">{space.mints} mint(s)</span>
+              <div className="space__row">
+                <span className="space__index">Space {index + 1}</span>
+                <span className="space__cost-badge">Cost: {costLabel}</span>
+              </div>
+              <div className="space__row space__row--meta">
+                <span className={`space__chip${space.occupiedBy ? ' space__chip--taken' : ''}`}>
+                  {statusLabel}
+                </span>
+                <span className="space__chip">Mints: {space.mints}</span>
+              </div>
             </button>
           );
         })}
@@ -178,6 +193,18 @@ function getDeedHint(location: LocationState): string | null {
   if (location.type !== 'deed' || location.isOpen) return null;
   const deedPlan = deedPlanName(location.id);
   return deedPlan ? `Opens when someone builds ${deedPlan}.` : 'Opens when its deed is built.';
+}
+
+function getDeedOwnerEffectText(location: LocationState): string | null {
+  if (location.type !== 'deed') return null;
+  switch (location.id) {
+    case 'wholesaler-location':
+      return 'Owner upkeep: Gain 1 mint if any mints were placed here this round.';
+    case 'lotto-location':
+      return 'Owner upkeep: Gain 2 mints if any mints were placed here this round.';
+    default:
+      return 'Owner upkeep: Gain mints if any mints were placed here this round.';
+  }
 }
 
 function deedPlanName(locationId: LocationId): string | null {
