@@ -1,7 +1,7 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Dispatch } from 'react';
 import type { GameAction } from '../../state/actions';
-import type { GameResults, GameState, LocationId } from '../../types/game';
+import type { GameLogEntry, GameResults, GameState, LocationId, PlayerId } from '../../types/game';
 import { Header } from '../Header/Header';
 import { Setup } from '../Setup/Setup';
 import { Board } from '../Board/Board';
@@ -10,6 +10,7 @@ import { ActionPanel } from '../ActionPanel/ActionPanel';
 import { GameLog } from '../GameLog/GameLog';
 import { NeighborhoodSummary } from '../NeighborhoodSummary/NeighborhoodSummary';
 import { initialSelection } from '../ActionPanel/selection';
+import { AiTurnModal } from '../AiTurnModal/AiTurnModal';
 
 interface GameProps {
   state: GameState;
@@ -18,21 +19,53 @@ interface GameProps {
 
 export const Game = memo(function Game({ state, dispatch }: GameProps) {
   const [selection, setSelection] = useState(initialSelection);
-  const [aiPlaybackActive, setAiPlaybackActive] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiModalEntries, setAiModalEntries] = useState<ReadonlyArray<GameLogEntry>>([]);
+  const [aiModalTitle, setAiModalTitle] = useState('AI Turn');
+  const lastLogLengthRef = useRef(state.log.length);
+  const lastPlayerIdRef = useRef<PlayerId | null>(
+    state.players[state.currentPlayerIndex]?.id ?? null,
+  );
 
   useEffect(() => {
     if (state.status === 'idle') {
       setSelection(initialSelection);
-      setAiPlaybackActive(false);
+      setAiModalOpen(false);
     }
   }, [state.status]);
+
+  useEffect(() => {
+    const previousLogLength = lastLogLengthRef.current;
+    if (state.log.length < previousLogLength) {
+      lastLogLengthRef.current = state.log.length;
+      lastPlayerIdRef.current = state.players[state.currentPlayerIndex]?.id ?? null;
+      setAiModalOpen(false);
+      return;
+    }
+
+    if (state.log.length > previousLogLength) {
+      const newEntries = state.log.slice(previousLogLength);
+      if (newEntries.some((entry) => entry.kind === 'ai')) {
+        const previousPlayerId = lastPlayerIdRef.current;
+        const previousPlayerName = previousPlayerId
+          ? state.players.find((player) => player.id === previousPlayerId)?.name
+          : null;
+        setAiModalEntries(newEntries);
+        setAiModalTitle(previousPlayerName ? `${previousPlayerName}'s Turn` : 'AI Turn');
+        setAiModalOpen(true);
+      }
+    }
+
+    lastLogLengthRef.current = state.log.length;
+    lastPlayerIdRef.current = state.players[state.currentPlayerIndex]?.id ?? null;
+  }, [state.currentPlayerIndex, state.log, state.players]);
 
   const selectionEnabled =
     state.status === 'playing' &&
     state.phase === 'development' &&
     state.pendingChoice === null &&
     state.players[state.currentPlayerIndex]?.type === 'human' &&
-    !aiPlaybackActive;
+    !aiModalOpen;
 
   const handleSelectSpace = (locationId: LocationId, spaceIndex: number) => {
     setSelection({ ...initialSelection, locationId, spaceIndex });
@@ -60,10 +93,10 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
                   dispatch={dispatch}
                   selection={selection}
                   setSelection={setSelection}
-                  interactionDisabled={aiPlaybackActive}
+                  interactionDisabled={aiModalOpen}
                 />
                 <NeighborhoodSummary state={state} />
-                <GameLog log={state.log} onPlaybackChange={setAiPlaybackActive} />
+                <GameLog log={state.log} />
               </div>
             </div>
             <PlayerList state={state} />
@@ -87,6 +120,12 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
           </section>
         )}
       </main>
+      <AiTurnModal
+        entries={aiModalEntries}
+        open={aiModalOpen}
+        title={aiModalTitle}
+        onClose={() => setAiModalOpen(false)}
+      />
     </div>
   );
 });
