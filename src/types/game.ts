@@ -178,6 +178,5 @@ export interface GameState {
   readonly pendingChoice: PendingChoice | null;
   readonly results: GameResults | null;
   readonly log: ReadonlyArray<GameLogEntry>;
-  readonly logSequence: number;
   readonly lastError?: string;
 }

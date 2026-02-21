@@ -58,7 +58,6 @@ export function createIdleState(): GameState {
     pendingChoice: null,
     results: null,
     log: [],
-    logSequence: 0,
     lastError: undefined,
   };
 }
@@ -104,7 +103,6 @@ export function startGame(settings: GameSettings, deckOrder: ReadonlyArray<PlanI
     pendingChoice: null,
     results: null,
     log: [],
-    logSequence: 0,
     lastError: undefined,
   };
 

@@ -8,8 +8,9 @@ type LogInput = {
 };
 
 export function appendLog(state: GameState, entry: LogInput): GameState {
+  const nextId = state.log.length + 1;
   const logEntry: GameLogEntry = {
-    id: state.logSequence + 1,
+    id: nextId,
     round: entry.round ?? state.round,
     phase: entry.phase ?? state.phase,
     kind: entry.kind ?? 'info',
@@ -18,7 +19,6 @@ export function appendLog(state: GameState, entry: LogInput): GameState {
 
   return {
     ...state,
-    logSequence: logEntry.id,
     log: [...state.log, logEntry],
   };
 }
