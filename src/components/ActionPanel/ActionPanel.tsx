@@ -138,7 +138,7 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
   const effect = hydrateTempEffect(rawEffect, state);
 
   const cost = selectedLocation
-    ? getCostForSelection(state, player, selectedLocation.id, selection, effect)
+    ? getCostForSelection(state, player, selectedLocation.id, effect)
     : null;
   const canPlace = Boolean(
     selectedLocation && openSpaceIndex >= 0 && effect && cost !== null && cost <= player.mints,
@@ -594,7 +594,6 @@ function getCostForSelection(
   state: GameState,
   player: PlayerState,
   locationId: LocationId,
-  selection: SelectionState,
   effect: PlaceEffect | null,
 ): number | null {
   if (!effect) return null;

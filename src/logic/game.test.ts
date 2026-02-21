@@ -1146,7 +1146,10 @@ describe('game logic', () => {
     const noPending = resolveCoopChoice(state, 'p1', 'p2');
     expect(noPending.lastError).toBeTruthy();
 
-    const pending = { ...state, pendingChoice: { type: 'COOP_TARGET', playerId: 'p1' } };
+    const pending: GameState = {
+      ...state,
+      pendingChoice: { type: 'COOP_TARGET', playerId: 'p1' },
+    };
     const wrongPlayer = resolveCoopChoice(pending, 'p2', 'p1');
     expect(wrongPlayer.lastError).toBeTruthy();
 
@@ -1842,7 +1845,7 @@ describe('game logic', () => {
       ...location,
       spaces: location.spaces.map((space) => ({
         ...space,
-        cost: undefined as typeof space.cost,
+        cost: undefined as unknown as typeof space.cost,
       })),
     }));
     expect(getLocationCost(noCostState, player, 'producer', 'gardens')).toBeNull();
@@ -1851,7 +1854,7 @@ describe('game logic', () => {
       ...location,
       spaces: location.spaces.map((space) => ({
         ...space,
-        cost: { kind: 'mystery' } as typeof space.cost,
+        cost: { kind: 'mystery' } as unknown as typeof space.cost,
       })),
     }));
     expect(getLocationCost(weirdCostState, player, 'producer', 'gardens')).toBeNull();

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PlayerState } from '../types/game';
-import type { PlanId } from '../types/game';
+import type { BuildingState, PlanId, PlayerState } from '../types/game';
 import {
   countCultureBuildings,
   getBuildingStars,
@@ -75,7 +74,7 @@ describe('plan scoring', () => {
   });
 
   it('handles gallery stored mints and culture counts', () => {
-    const buildings = [
+    const buildings: ReadonlyArray<BuildingState> = [
       { planId: 'bridge', storedMints: 0 },
       { planId: 'truck', storedMints: 0 },
       { planId: 'gallery', storedMints: 2 },

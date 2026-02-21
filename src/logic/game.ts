@@ -47,16 +47,18 @@ export function applyPlaceAction(state: GameState, payload: PlacePayload): GameS
     return withError(state, 'That space is already occupied.');
   }
 
-  const effectTarget = payload.effect.kind === 'temp-agency' ? payload.effect : null;
-  const effectLocationId = effectTarget ? effectTarget.targetLocationId : payload.locationId;
-  const effect = effectTarget ? effectTarget.effect : payload.effect;
-
-  if (effectTarget) {
+  if (payload.effect.kind === 'temp-agency') {
+    const effectTarget = payload.effect;
+    const effect = effectTarget.effect;
     const targetLocation = state.locations.find((loc) => loc.id === effectTarget.targetLocationId);
     if (!targetLocation) return withError(state, 'Invalid Temp Agency target.');
     if (state.lockedLocations.includes(targetLocation.id)) {
       return withError(state, 'That target location is locked.');
     }
+    if (effectTarget.targetLocationId === 'temp-agency') {
+      return withError(state, 'Temp Agency must target another location.');
+    }
+    const targetLocationId = effectTarget.targetLocationId;
     if (!targetLocation.spaces.some((space) => space.occupiedBy)) {
       return withError(state, 'Temp Agency needs an occupied location.');
     }
@@ -68,25 +70,37 @@ export function applyPlaceAction(state: GameState, payload: PlacePayload): GameS
       return withError(state, 'Temp Agency must target an occupied space.');
     }
 
-    const targetValidation = validateLocationEffect(
-      state,
-      player,
-      effectTarget.targetLocationId,
-      effectTarget.effect,
-    );
+    const targetValidation = validateLocationEffect(state, player, targetLocationId, effect);
     if (targetValidation) return withError(state, targetValidation);
-  } else {
-    const validation = validateLocationEffect(state, player, payload.locationId, effect);
-    if (validation) return withError(state, validation);
+
+    const cost = getPlacementCost(state, player, payload.locationId, effect, targetLocationId);
+    if (cost === null) {
+      return withError(state, 'Invalid placement options for that location.');
+    }
+
+    if (player.mints < cost) {
+      return withError(state, 'Not enough mints to pay that cost.');
+    }
+
+    const updatedLocation = occupyLocationSpace(location, payload.spaceIndex, player.id, cost);
+    let nextState = updateLocation(state, updatedLocation);
+    nextState = updatePlayer(nextState, player.id, (p) => ({ ...p, mints: p.mints - cost }));
+
+    nextState = applyLocationEffect(nextState, player.id, targetLocationId, effect);
+
+    nextState = advanceTurnAfterAction(nextState, player, payload.locationId, true);
+    return clearError(nextState);
   }
 
-  const cost = getPlacementCost(
-    state,
-    player,
-    payload.locationId,
-    effect,
-    effectTarget ? effectTarget.targetLocationId : null,
-  );
+  if (payload.locationId === 'temp-agency') {
+    return withError(state, 'Temp Agency must target another location.');
+  }
+
+  const effect = payload.effect;
+  const validation = validateLocationEffect(state, player, payload.locationId, effect);
+  if (validation) return withError(state, validation);
+
+  const cost = getPlacementCost(state, player, payload.locationId, effect, null);
   if (cost === null) {
     return withError(state, 'Invalid placement options for that location.');
   }
@@ -99,12 +113,7 @@ export function applyPlaceAction(state: GameState, payload: PlacePayload): GameS
   let nextState = updateLocation(state, updatedLocation);
   nextState = updatePlayer(nextState, player.id, (p) => ({ ...p, mints: p.mints - cost }));
 
-  nextState = applyLocationEffect(
-    nextState,
-    player.id,
-    effectLocationId as Exclude<LocationId, 'temp-agency'>,
-    effect,
-  );
+  nextState = applyLocationEffect(nextState, player.id, payload.locationId, effect);
 
   nextState = advanceTurnAfterAction(nextState, player, payload.locationId, true);
   return clearError(nextState);
@@ -503,7 +512,7 @@ function applyLocationEffect(
 }
 
 function applyLeadership(state: GameState, playerId: PlayerId): GameState {
-  let nextState = { ...state, startingPlayerId: playerId };
+  let nextState: GameState = { ...state, startingPlayerId: playerId };
   nextState = applyMintGain(nextState, playerId, 1);
   return nextState;
 }
@@ -539,7 +548,7 @@ function gainPlanFromSupplier(state: GameState, playerId: PlayerId, planId: Plan
 function gainPlanFromDeck(state: GameState, playerId: PlayerId): GameState {
   if (state.planDeck.length === 0) return state;
   const [top, ...rest] = state.planDeck;
-  let nextState = { ...state, planDeck: rest };
+  let nextState: GameState = { ...state, planDeck: rest };
   nextState = addPlan(nextState, playerId, top);
   return nextState;
 }
@@ -762,7 +771,12 @@ function advanceTurnAfterAction(
 }
 
 function beginUpkeep(state: GameState): GameState {
-  let nextState = { ...state, phase: 'upkeep', passedPlayers: [], lockedLocations: [] };
+  let nextState: GameState = {
+    ...state,
+    phase: 'upkeep',
+    passedPlayers: [],
+    lockedLocations: [],
+  };
 
   const endGame = checkEndGame(nextState);
   if (endGame) return endGame;
