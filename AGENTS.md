@@ -6,12 +6,14 @@ Always run the full CI suite locally before pushing:
 
 ```bash
 npm run lint
+npm run typecheck
+npm run format
 npm run format:check
 npm run test:coverage
 npm run test:e2e
 ```
 
-Never push without running all four. If any step fails, fix it before pushing.
+Never push without running all six. If any step fails, fix it before pushing.
 
 Note: The workflow uses `concurrency: cancel-in-progress: true`. Pushing a second commit while the first run is still in-flight cancels it.
 
@@ -24,5 +26,6 @@ Note: The workflow uses `concurrency: cancel-in-progress: true`. Pushing a secon
 ## Project Conventions
 
 - Use `npm run test:coverage` (not `npm test`)
+- Use `npm run typecheck` for standalone TypeScript checks
 - Run `npm run format` before `format:check`
 - TypeScript strict mode: no `any`, no unused locals or parameters
