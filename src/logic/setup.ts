@@ -116,7 +116,7 @@ export function startGame(settings: GameSettings, deckOrder: ReadonlyArray<PlanI
       .join(', ') || 'None';
   const startName = players.find((p) => p.id === startingPlayerId)?.name ?? startingPlayerId;
 
-  const logEntries = [
+  const logEntries: Array<{ kind: 'system'; text: string; round: number }> = [
     {
       kind: 'system',
       text: `Game started with ${playerNames}. Advanced locations: ${advancedNames}.`,
