@@ -1,0 +1,38 @@
+# Mint Works Plan/Building Catalog (Template)
+
+Use this as a fill-in template for all Plan/Building cards. The table below is pre-populated with the currently known cards from `rules.md` and your clarifications. Please add missing cards and fill in any `TBD` fields with exact card text.
+
+## Conventions
+- "Plan" = a card in your Neighborhood that is face-down until built.
+- "Building" = a Plan that has been built (face-up).
+- Stars are the scoring mechanism.
+- Tag glossary (use ASCII tags in `Tags/Icons`):
+  - `Culture`
+  - `Utility`
+  - `Production`
+  - `Deed`
+
+## Plan/Building List
+| Name | Cost | Tags/Icons | Effect | Star Value | Special Notes |
+| --- | --- | --- | --- | --- | --- |
+| Assembler | 5 | `Utility` | Automatically build Plans you gain from the Supplier. | 1 | Plans bought from the Supplier are placed into this Neighborhood as Buildings. |
+| Gardens | 3 | `Culture` | | 3 | |
+| Statue | 2 | `Culture` | | 2 | |
+| Bridge | 1 | `Culture` | Counts as two `Culture` Buildings. | 0 | Counts as 2 `Culture` Buildings in all scenarios, including, but not limited to: Museum, Obelisk, Corporate HQ, and tiebreakers. |
+| Landfill | 3 | `Utility` | You gain one fewer `Stars` from each `Culture` Building in your Neighborhood. | 3 | Reduce the number of Stars provided by each `Culture` Building in the same Neighborhood by 1, to a minimum of 0. |
+| Stripmine | 4 | `Production` | Upkeep: Gain 3 Mints. | 0 | |
+| Co-Op | 1 | `Production` | Upkeep: Gain 1 Mint and choose another player to gain 1 Mint. | 1 | |
+| Truck | 2 | `Utility` | You pay 1 Mint less at the Supplier (minimum 1). | 1 | Pay 1 Mint fewer when buying Plans at the Supplier, to a minimum of 1 Mint. |
+| Corporate HQ | 3 | `Production` | Upkeep: Gain 1 Mint for each face up Building in your Neighborhood. | 0 | During the Upkeep phase, gain 1 Mint for each Building in the same Neighborhood (includes itself). |
+| Mine | 2 | `Production` | Upkeep: Gain 1 Mint. | 1 | |
+| Vault | 5 | `Utility` | Each face down Plan in your Neighborhood is worth 2 `Stars`. | Var | Gain 2 `Stars` for each Plan (face down) in the same Neighborhood. |
+| Crane | 2 | `Utility` | Pay 1 Mint less at the Builder. | 1 | |
+| Museum | 2 | `Culture` | | Var | Provides Stars for each `Culture` Building in the same Neighborhood (includes itself). |
+| Factory | 4 | `Production` | Upkeep: Gain 1 Mint. | 3 | |
+| Obelisk | 4 | `Utility` | | Var | Provides Stars for each Building in the same Neighborhood (includes itself). |
+| Windmill | 1 | `Culture` | | 1 | |
+| Gallery | 4 | `Culture` | Upkeep: Add 1 Mint from the Mint Supply to Gallery. | Var | During the Upkeep phase, take 1 Mint from the Mint Supply and place it on Gallery. Gallery has Stars equal to the number of placed Mints on it. |
+| Wholesaler | 1 | `Deed` | You are the Owner of the Wholesaler location. | 1 | When a `Deed` type Plan is built, the corresponding Location becomes open (flip it over to its "open" side), the player with this deed is considered the Owner of that Location. The newly-available Location may now be used like any other Location. |
+| Plant | 5 | `Production` | Upkeep: Gain 2 Mints. | 2 | |
+| Workshop | 3 | `Production` | Upkeep: Gain 1 Mint. | 2 | |
+| Lotto | 4 | `Deed` | You are the Owner of the Lotto location. | 2 | When a `Deed` type Plan is built, the corresponding Location becomes open (flip it over to its "open" side), the player with this deed is considered the Owner of that Location. The newly-available Location may now be used like any other Location. |
