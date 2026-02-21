@@ -1,12 +1,14 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import type { Dispatch } from 'react';
 import type { GameAction } from '../../state/actions';
-import type { GameResults, GameState } from '../../types/game';
+import type { GameResults, GameState, LocationId } from '../../types/game';
 import { Header } from '../Header/Header';
 import { Setup } from '../Setup/Setup';
 import { Board } from '../Board/Board';
 import { PlayerList } from '../PlayerList/PlayerList';
 import { ActionPanel } from '../ActionPanel/ActionPanel';
+import { GameLog } from '../GameLog/GameLog';
+import { initialSelection } from '../ActionPanel/selection';
 
 interface GameProps {
   state: GameState;
@@ -14,6 +16,24 @@ interface GameProps {
 }
 
 export const Game = memo(function Game({ state, dispatch }: GameProps) {
+  const [selection, setSelection] = useState(initialSelection);
+
+  useEffect(() => {
+    if (state.status === 'idle') {
+      setSelection(initialSelection);
+    }
+  }, [state.status]);
+
+  const selectionEnabled =
+    state.status === 'playing' &&
+    state.phase === 'development' &&
+    state.pendingChoice === null &&
+    state.players[state.currentPlayerIndex]?.type === 'human';
+
+  const handleSelectSpace = (locationId: LocationId, spaceIndex: number) => {
+    setSelection({ ...initialSelection, locationId, spaceIndex });
+  };
+
   return (
     <div className="app">
       <Header state={state} dispatch={dispatch} />
@@ -24,8 +44,21 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
           <>
             {state.lastError && <div className="alert">{state.lastError}</div>}
             <div className="layout">
-              <Board state={state} />
-              <ActionPanel state={state} dispatch={dispatch} />
+              <Board
+                state={state}
+                selection={selection}
+                selectionEnabled={selectionEnabled}
+                onSelectSpace={handleSelectSpace}
+              />
+              <div className="sidebar">
+                <ActionPanel
+                  state={state}
+                  dispatch={dispatch}
+                  selection={selection}
+                  setSelection={setSelection}
+                />
+                <GameLog log={state.log} />
+              </div>
             </div>
             <PlayerList state={state} />
           </>

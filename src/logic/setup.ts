@@ -1,5 +1,6 @@
 import type { AiId, GameSettings, GameState, PlayerId, PlayerState, PlanId } from '../types/game';
 import { buildLocations } from './locations';
+import { appendLogs } from './log';
 
 const ALL_PLAN_IDS: ReadonlyArray<PlanId> = [
   'assembler',
@@ -56,6 +57,8 @@ export function createIdleState(): GameState {
     upkeepQueue: [],
     pendingChoice: null,
     results: null,
+    log: [],
+    logSequence: 0,
     lastError: undefined,
   };
 }
@@ -81,7 +84,7 @@ export function startGame(settings: GameSettings, deckOrder: ReadonlyArray<PlanI
     mintSupply = Math.max(0, mintSupply - players.reduce((sum, p) => sum + p.mints, 0));
   }
 
-  return {
+  const baseState: GameState = {
     status: 'playing',
     phase: 'development',
     elapsedSeconds: 0,
@@ -100,8 +103,40 @@ export function startGame(settings: GameSettings, deckOrder: ReadonlyArray<PlanI
     upkeepQueue: [],
     pendingChoice: null,
     results: null,
+    log: [],
+    logSequence: 0,
     lastError: undefined,
   };
+
+  const playerNames = players.map((player) => player.name).join(', ');
+  const advancedNames =
+    locations.filter((location) => location.type === 'advanced').map((location) => location.name)
+      .join(', ') || 'None';
+  const startName = players.find((p) => p.id === startingPlayerId)?.name ?? startingPlayerId;
+
+  const logEntries = [
+    {
+      kind: 'system',
+      text: `Game started with ${playerNames}. Advanced locations: ${advancedNames}.`,
+      round: 1,
+    },
+    {
+      kind: 'system',
+      text: `Starting player: ${startName}.`,
+      round: 1,
+    },
+  ];
+
+  if (settings.soloMode && settings.aiOpponent) {
+    const aiName = players.find((player) => player.type === 'ai')?.name ?? 'AI';
+    logEntries.push({
+      kind: 'system',
+      text: `Solo opponent: ${aiName}.`,
+      round: 1,
+    });
+  }
+
+  return appendLogs(baseState, logEntries);
 }
 
 function createPlayers(settings: GameSettings): ReadonlyArray<PlayerState> {

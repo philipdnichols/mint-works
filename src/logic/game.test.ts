@@ -1163,7 +1163,7 @@ describe('game logic', () => {
     state = {
       ...state,
       pendingChoice: { type: 'COOP_TARGET', playerId: 'p1' },
-      upkeepQueue: [{ type: 'GAIN_MINTS', playerId: 'p1', amount: 0 }],
+      upkeepQueue: [{ type: 'GAIN_MINTS', playerId: 'p1', amount: 0, sourcePlanId: 'mine' }],
     };
     const next = resolveCoopChoice(state, 'p1', 'p2');
     const p1 = next.players.find((player) => player.id === 'p1')!;

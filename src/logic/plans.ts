@@ -24,6 +24,31 @@ export const PLAN_DEFINITIONS: ReadonlyArray<PlanDefinition> = [
   { id: 'lotto', name: 'Lotto', cost: 4, tag: 'Deed', stars: 2 },
 ];
 
+const PLAN_EFFECTS: Record<PlanId, string> = {
+  assembler:
+    'Automatically build Plans you gain from the Supplier without using the Builder (including Deed openings).',
+  gardens: 'No special effect.',
+  statue: 'No special effect.',
+  bridge: 'Counts as two Culture buildings in all scenarios.',
+  landfill: 'You gain one fewer star from each Culture building (minimum 0).',
+  stripmine: 'Upkeep: Gain 3 mints.',
+  coop: 'Upkeep: Gain 1 mint and choose another player to gain 1 mint.',
+  truck: 'You pay 1 mint less at the Supplier (minimum 1).',
+  'corporate-hq': 'Upkeep: Gain 1 mint per building in your neighborhood (includes itself).',
+  mine: 'Upkeep: Gain 1 mint.',
+  vault: 'Stars: 2 per face-down plan in your neighborhood.',
+  crane: 'Pay 1 mint less at the Builder (Builder costs 1 for you).',
+  museum: 'Stars equal to your culture buildings (Bridge counts twice).',
+  factory: 'Upkeep: Gain 1 mint.',
+  obelisk: 'Stars equal to your face-up buildings (includes itself).',
+  windmill: 'No special effect.',
+  gallery: 'Upkeep: Store 1 mint on Gallery. Stars equal stored mints.',
+  wholesaler: 'You become the owner of the Wholesaler location.',
+  plant: 'Upkeep: Gain 2 mints.',
+  workshop: 'Upkeep: Gain 1 mint.',
+  lotto: 'You become the owner of the Lotto location.',
+};
+
 const PLAN_MAP: ReadonlyMap<PlanId, PlanDefinition> = new Map(
   PLAN_DEFINITIONS.map((plan) => [plan.id, plan]),
 );
@@ -50,6 +75,38 @@ export function isDeedPlan(planId: PlanId): boolean {
 
 export function isProductionPlan(planId: PlanId): boolean {
   return isPlanTag(planId, 'Production');
+}
+
+export interface PlanStarInfo {
+  readonly label: string;
+  readonly hint?: string;
+}
+
+export function getPlanStarInfo(planId: PlanId): PlanStarInfo {
+  const plan = getPlanDefinition(planId);
+  if (plan.stars !== 'var') {
+    return { label: String(plan.stars) };
+  }
+
+  switch (planId) {
+    case 'vault':
+      return { label: 'variable', hint: '2 stars per plan in hand.' };
+    case 'museum':
+      return {
+        label: 'variable',
+        hint: 'Stars equal to your culture buildings (Bridge counts twice), minus Landfills.',
+      };
+    case 'obelisk':
+      return { label: 'variable', hint: '1 star per building.' };
+    case 'gallery':
+      return { label: 'variable', hint: 'Stars equal to mints stored on the Gallery.' };
+    default:
+      return { label: 'variable' };
+  }
+}
+
+export function getPlanEffect(planId: PlanId): string {
+  return PLAN_EFFECTS[planId];
 }
 
 export function countLandfills(buildings: ReadonlyArray<BuildingState>): number {
@@ -104,6 +161,74 @@ export function getBuildingStars(building: BuildingState, player: PlayerState): 
   }
 
   return baseStars;
+}
+
+export interface BuildingStarBreakdown {
+  readonly total: number;
+  readonly base: number;
+  readonly baseLabel: string;
+  readonly landfillPenalty: number;
+  readonly landfillCount: number;
+  readonly isCulture: boolean;
+}
+
+export function getBuildingStarBreakdown(
+  building: BuildingState,
+  player: PlayerState,
+): BuildingStarBreakdown {
+  const definition = getPlanDefinition(building.planId);
+  const landfillCount = countLandfills(player.buildings);
+  let baseStars = 0;
+  let baseLabel = '';
+
+  switch (building.planId) {
+    case 'vault':
+      baseStars = player.plans.length * 2;
+      baseLabel = `${player.plans.length} plan(s) x2`;
+      break;
+    case 'museum': {
+      const cultureCount = countCultureBuildings(player.buildings);
+      baseStars = cultureCount;
+      baseLabel = `${cultureCount} culture building(s)`;
+      break;
+    }
+    case 'obelisk': {
+      const buildingCount = countBuildings(player.buildings);
+      baseStars = buildingCount;
+      baseLabel = `${buildingCount} building(s)`;
+      break;
+    }
+    case 'gallery':
+      baseStars = building.storedMints;
+      baseLabel = `${building.storedMints} stored mint(s)`;
+      break;
+    default:
+      baseStars = definition.stars as number;
+      baseLabel = 'Printed stars';
+      break;
+  }
+
+  if (isCulturePlan(building.planId)) {
+    const total = applyCulturePenalty(baseStars, landfillCount);
+    const penalty = Math.min(baseStars, landfillCount);
+    return {
+      total,
+      base: baseStars,
+      baseLabel,
+      landfillPenalty: penalty,
+      landfillCount,
+      isCulture: true,
+    };
+  }
+
+  return {
+    total: baseStars,
+    base: baseStars,
+    baseLabel,
+    landfillPenalty: 0,
+    landfillCount,
+    isCulture: false,
+  };
 }
 
 export function getPlayerTotalStars(player: PlayerState): number {

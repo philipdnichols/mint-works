@@ -1,52 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { Dispatch } from 'react';
+import { useEffect, useMemo } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { GameAction, NonTempPlaceEffect, PlaceEffect } from '../../state/actions';
 import type { GameState, LocationId, LocationState, PlanId, PlayerState } from '../../types/game';
+import { getAiProfile } from '../../logic/ai';
 import { getPlanDefinition } from '../../logic/plans';
 import { getLocationCost, getTempAgencyCost } from '../../logic/game';
+import type { SelectionState } from './selection';
+import { initialSelection } from './selection';
 
 interface ActionPanelProps {
   state: GameState;
   dispatch: Dispatch<GameAction>;
+  selection: SelectionState;
+  setSelection: Dispatch<SetStateAction<SelectionState>>;
 }
 
-interface SelectionState {
-  locationId: LocationId | '';
-  supplierPlanId: PlanId | '';
-  builderPlanId: PlanId | '';
-  recyclePlanId: PlanId | '';
-  recycleFrom: 'plan' | 'building';
-  swapGiveId: PlanId | '';
-  swapTakeId: PlanId | '';
-  tempTargetLocationId: LocationId | '';
-  tempSupplierPlanId: PlanId | '';
-  tempBuilderPlanId: PlanId | '';
-  tempRecyclePlanId: PlanId | '';
-  tempRecycleFrom: 'plan' | 'building';
-  tempSwapGiveId: PlanId | '';
-  tempSwapTakeId: PlanId | '';
-}
-
-const initialSelection: SelectionState = {
-  locationId: '',
-  supplierPlanId: '',
-  builderPlanId: '',
-  recyclePlanId: '',
-  recycleFrom: 'plan',
-  swapGiveId: '',
-  swapTakeId: '',
-  tempTargetLocationId: '',
-  tempSupplierPlanId: '',
-  tempBuilderPlanId: '',
-  tempRecyclePlanId: '',
-  tempRecycleFrom: 'plan',
-  tempSwapGiveId: '',
-  tempSwapTakeId: '',
-};
-
-export function ActionPanel({ state, dispatch }: ActionPanelProps) {
+export function ActionPanel({ state, dispatch, selection, setSelection }: ActionPanelProps) {
   const player = state.players[state.currentPlayerIndex];
-  const [selection, setSelection] = useState<SelectionState>(initialSelection);
 
   const availableLocations = useMemo(
     () =>
@@ -60,13 +30,22 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
   );
 
   useEffect(() => {
-    if (
-      selection.locationId &&
-      !availableLocations.some((loc) => loc.id === selection.locationId)
-    ) {
+    if (!selection.locationId) return;
+    const location = state.locations.find((loc) => loc.id === selection.locationId);
+    if (!location) {
+      setSelection(initialSelection);
+      return;
+    }
+    if (!availableLocations.some((loc) => loc.id === selection.locationId)) {
+      setSelection(initialSelection);
+      return;
+    }
+    if (selection.spaceIndex === null) return;
+    const selectedSpace = location.spaces[selection.spaceIndex];
+    if (!selectedSpace || selectedSpace.occupiedBy) {
       setSelection(initialSelection);
     }
-  }, [availableLocations, selection.locationId]);
+  }, [availableLocations, selection.locationId, selection.spaceIndex, state.locations]);
 
   useEffect(() => {
     setSelection(initialSelection);
@@ -119,9 +98,28 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
   }
 
   if (player.type === 'ai') {
+    const profile = getAiProfile(player.aiId);
+    const supplierPriority = profile
+      ? `${profile.costPriority === 'high' ? 'Highest' : 'Lowest'} cost, then ${profile.typePriority.join(
+          ' > ',
+        )}, then closest to deck.`
+      : null;
     return (
       <section className="panel">
         <h3>{player.name} (AI)</h3>
+        {profile && (
+          <div className="panel__ai">
+            <div className="panel__ai-title">{profile.title}</div>
+            <div className="panel__ai-meta">Starting mints: {profile.startingMints}</div>
+            <div className="panel__ai-meta">Supplier priority: {supplierPriority}</div>
+            <div className="panel__ai-meta">Behavior:</div>
+            <ul className="panel__ai-list">
+              {profile.traits.map((trait) => (
+                <li key={trait}>{trait}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <button type="button" onClick={() => dispatch({ type: 'RUN_AI_TURN' })}>
           Run AI Turn
         </button>
@@ -129,10 +127,13 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
     );
   }
 
-  const selectedLocation = availableLocations.find((loc) => loc.id === selection.locationId);
-  const openSpaceIndex = selectedLocation
-    ? selectedLocation.spaces.findIndex((space) => !space.occupiedBy)
-    : -1;
+  const selectedLocation = state.locations.find((loc) => loc.id === selection.locationId);
+  const selectedSpaceIndex = selection.spaceIndex ?? -1;
+  const selectedSpace =
+    selectedLocation && selectedSpaceIndex >= 0
+      ? selectedLocation.spaces[selectedSpaceIndex]
+      : null;
+  const selectedSpaceOpen = Boolean(selectedSpace && !selectedSpace.occupiedBy);
 
   const rawEffect = buildEffect(selection, selectedLocation?.id ?? null);
   const effect = hydrateTempEffect(rawEffect, state);
@@ -141,25 +142,31 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
     ? getCostForSelection(state, player, selectedLocation.id, effect)
     : null;
   const canPlace = Boolean(
-    selectedLocation && openSpaceIndex >= 0 && effect && cost !== null && cost <= player.mints,
+    selectedLocation &&
+      selectedSpaceOpen &&
+      effect &&
+      cost !== null &&
+      selectedSpaceIndex >= 0 &&
+      cost <= player.mints,
   );
   const placeHint = getPlaceHint(
     state,
     player,
     selection,
     selectedLocation,
-    openSpaceIndex,
+    selectedSpaceIndex,
+    selectedSpaceOpen,
     effect,
     cost,
   );
 
   const handlePlace = () => {
-    if (!selectedLocation || openSpaceIndex < 0 || !effect) return;
+    if (!selectedLocation || selectedSpaceIndex < 0 || !effect || !selectedSpaceOpen) return;
     dispatch({
       type: 'PLACE_ON_LOCATION',
       payload: {
         locationId: selectedLocation.id,
-        spaceIndex: openSpaceIndex,
+        spaceIndex: selectedSpaceIndex,
         effect,
       },
     });
@@ -168,28 +175,33 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
   return (
     <section className="panel">
       <h3>{player.name}'s Turn</h3>
-      <div className="panel__row">
-        <label>
-          Location
-          <select
-            value={selection.locationId}
-            onChange={(event) =>
-              setSelection((current) => ({
-                ...current,
-                locationId: event.target.value as LocationId,
-              }))
-            }
+      <div className="panel__row panel__row--between">
+        <div className="panel__selection">
+          <span className="panel__label">Selected spot</span>
+          <span className="panel__value">
+            {selectedLocation && selectedSpaceIndex >= 0
+              ? `${selectedLocation.name} (space ${selectedSpaceIndex + 1})`
+              : 'None'}
+          </span>
+        </div>
+        {selectedLocation && (
+          <button
+            type="button"
+            className="panel__ghost"
+            onClick={() => setSelection(initialSelection)}
           >
-            <option value="">Select...</option>
-            {availableLocations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        {cost !== null && <span className="panel__cost">Cost: {cost} mint(s)</span>}
+            Clear
+          </button>
+        )}
       </div>
+      {selectedLocation && selectedSpaceIndex >= 0 && cost !== null && (
+        <div className="panel__row">
+          <span className="panel__cost">Cost: {cost} mint(s)</span>
+        </div>
+      )}
+      {!selectedLocation && (
+        <p className="panel__note">Click a location space on the board to choose a spot.</p>
+      )}
 
       {selectedLocation?.id === 'supplier' && (
         <label className="panel__row">
@@ -637,15 +649,19 @@ function getPlaceHint(
   player: PlayerState,
   selection: SelectionState,
   selectedLocation: LocationState | undefined,
-  openSpaceIndex: number,
+  selectedSpaceIndex: number,
+  selectedSpaceOpen: boolean,
   effect: PlaceEffect | null,
   cost: number | null,
 ): PlaceHint | null {
   if (!selectedLocation) {
-    return { text: 'Choose a location to place a mint.' };
+    return { text: 'Choose a location space to place a mint.' };
   }
-  if (openSpaceIndex < 0) {
-    return { text: 'No open spaces at this location.', tone: 'warning' };
+  if (selectedSpaceIndex < 0) {
+    return { text: 'Choose a specific space on this location.' };
+  }
+  if (!selectedSpaceOpen) {
+    return { text: 'That space is already occupied.', tone: 'warning' };
   }
 
   if (!effect) {

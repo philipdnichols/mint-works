@@ -102,9 +102,18 @@ export interface PlanDefinition {
 }
 
 export type UpkeepEffect =
-  | { readonly type: 'GAIN_MINTS'; readonly playerId: PlayerId; readonly amount: number }
-  | { readonly type: 'GAIN_MINTS_PER_BUILDING'; readonly playerId: PlayerId }
-  | { readonly type: 'COOP'; readonly playerId: PlayerId }
+  | {
+      readonly type: 'GAIN_MINTS';
+      readonly playerId: PlayerId;
+      readonly amount: number;
+      readonly sourcePlanId: PlanId;
+    }
+  | {
+      readonly type: 'GAIN_MINTS_PER_BUILDING';
+      readonly playerId: PlayerId;
+      readonly sourcePlanId: PlanId;
+    }
+  | { readonly type: 'COOP'; readonly playerId: PlayerId; readonly sourcePlanId: PlanId }
   | { readonly type: 'GALLERY'; readonly playerId: PlayerId; readonly planId: PlanId };
 
 export type PendingChoice =
@@ -133,6 +142,16 @@ export type PendingChoice =
       readonly playerId: PlayerId;
     };
 
+export type GameLogKind = 'system' | 'action' | 'ai' | 'upkeep' | 'info';
+
+export interface GameLogEntry {
+  readonly id: number;
+  readonly round: number;
+  readonly phase: Phase;
+  readonly kind: GameLogKind;
+  readonly text: string;
+}
+
 export interface GameResults {
   readonly scores: ReadonlyArray<{ readonly playerId: PlayerId; readonly stars: number }>;
   readonly winnerIds: ReadonlyArray<PlayerId>;
@@ -158,5 +177,7 @@ export interface GameState {
   readonly upkeepQueue: ReadonlyArray<UpkeepEffect>;
   readonly pendingChoice: PendingChoice | null;
   readonly results: GameResults | null;
+  readonly log: ReadonlyArray<GameLogEntry>;
+  readonly logSequence: number;
   readonly lastError?: string;
 }

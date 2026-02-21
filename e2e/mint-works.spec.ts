@@ -59,6 +59,15 @@ function playerCard(page: import('@playwright/test').Page, name: string) {
   return page.locator('.player').filter({ has: page.getByRole('heading', { name }) });
 }
 
+async function selectLocationSpace(
+  page: import('@playwright/test').Page,
+  locationName: string,
+  spaceIndex = 1,
+) {
+  const matcher = new RegExp(`${locationName} space ${spaceIndex}`, 'i');
+  await page.getByRole('button', { name: matcher }).click();
+}
+
 test.describe('Mint Works!', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(APP_URL);
@@ -94,6 +103,8 @@ test.describe('Mint Works!', () => {
         winnerIds: ['p1'],
         tiebreaker: 'stars',
       },
+      log: [],
+      logSequence: 0,
     };
     await dispatch(page, { type: '__TEST_LOAD_STATE', state: preset as GameState });
     await expect(page.getByText(/results/i)).toBeVisible();
@@ -101,7 +112,7 @@ test.describe('Mint Works!', () => {
 
   test('shows temp agency warning when no occupied locations exist', async ({ page }) => {
     await startTestGame(page);
-    await page.getByLabel('Location').selectOption('Temp Agency');
+    await selectLocationSpace(page, 'Temp Agency');
     await expect(page.getByText('No occupied locations to target.')).toBeVisible();
   });
 
@@ -129,7 +140,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Temp Agency');
+    await selectLocationSpace(page, 'Temp Agency');
     await page.getByLabel('Target occupied location').selectOption('Producer');
     await expect(page.getByText('Cost: 2 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
@@ -149,9 +160,7 @@ test.describe('Mint Works!', () => {
       passedPlayers: [],
       planSupply: ['truck', 'crane', 'plant'],
       players: state.players.map((player) =>
-        player.id === 'p1'
-          ? { ...player, mints: 5, plans: [], buildings: [] }
-          : { ...player },
+        player.id === 'p1' ? { ...player, mints: 5, plans: [], buildings: [] } : { ...player },
       ),
       locations: state.locations.map((loc) => {
         if (loc.id !== 'supplier') return loc;
@@ -165,7 +174,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Temp Agency');
+    await selectLocationSpace(page, 'Temp Agency');
     await page.getByLabel('Target occupied location').selectOption('Supplier');
     await page.getByLabel('Plan to gain').selectOption('Truck ($2)');
     await expect(page.getByText('Cost: 3 mint(s)')).toBeVisible();
@@ -202,7 +211,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Temp Agency');
+    await selectLocationSpace(page, 'Temp Agency');
     await page.getByLabel('Target occupied location').selectOption('Builder');
     await page.getByLabel('Plan to build').selectOption('Workshop ($3)');
     await expect(page.getByText('Cost: 3 mint(s)')).toBeVisible();
@@ -210,7 +219,7 @@ test.describe('Mint Works!', () => {
 
     const p1Card = playerCard(page, 'Player 1');
     await expect(p1Card.getByText('Plans (face-down): 0')).toBeVisible();
-    await expect(p1Card.getByText('Workshop - Stars: 2')).toBeVisible();
+    await expect(p1Card.getByRole('button', { name: /Workshop.*Stars: 2/i })).toBeVisible();
   });
 
   test('swap meet excludes the given plan from the take list', async ({ page }) => {
@@ -232,7 +241,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Swap Meet');
+    await selectLocationSpace(page, 'Swap Meet');
     await page.getByLabel('Give').selectOption('Plan: Truck ($2)');
 
     const take = page.getByLabel('Take');
@@ -257,7 +266,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Swap Meet');
+    await selectLocationSpace(page, 'Swap Meet');
     await page.getByLabel('Give').selectOption('Plan: Truck ($2)');
     await page.getByLabel('Take').selectOption('Crane ($2)');
     await expect(page.getByText('Cost: 2 mint(s)')).toBeVisible();
@@ -288,7 +297,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Recycler');
+    await selectLocationSpace(page, 'Recycler');
     await page.getByLabel('Recycle card').selectOption('Plan: Truck ($2)');
     await expect(page.getByText('Cost: 1 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
@@ -319,14 +328,14 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Recycler');
+    await selectLocationSpace(page, 'Recycler');
     await page.getByLabel('Recycle card').selectOption('Building: Workshop ($3)');
     await expect(page.getByText('Cost: 1 mint(s)')).toBeVisible();
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');
     await expect(p1Card.getByText('Mints: 4')).toBeVisible();
-    await expect(p1Card.getByText('Workshop - Stars: 2')).toHaveCount(0);
+    await expect(p1Card.getByRole('button', { name: /Workshop.*Stars: 2/i })).toHaveCount(0);
   });
 
   test('crowdfunder grants bonus mints to every player', async ({ page }) => {
@@ -342,7 +351,7 @@ test.describe('Mint Works!', () => {
       results: null,
     }));
 
-    await page.getByLabel('Location').selectOption('Crowdfunder');
+    await selectLocationSpace(page, 'Crowdfunder');
     await page.getByRole('button', { name: 'Place Mint' }).click();
 
     const p1Card = playerCard(page, 'Player 1');

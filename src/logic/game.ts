@@ -1,5 +1,5 @@
 import type {
-  AiId,
+  GameLogKind,
   GameResults,
   GameState,
   LocationId,
@@ -10,6 +10,8 @@ import type {
   UpkeepEffect,
 } from '../types/game';
 import type { NonTempPlaceEffect, PlacePayload } from '../state/actions';
+import { aiAvoidsProduction, aiSkipsSupplierWithPlans, getAiCostPriority, getAiTypePriority } from './ai';
+import { appendLog } from './log';
 import {
   countCultureBuildings,
   getBuildingStars,
@@ -85,6 +87,16 @@ export function applyPlaceAction(state: GameState, payload: PlacePayload): GameS
     const updatedLocation = occupyLocationSpace(location, payload.spaceIndex, player.id, cost);
     let nextState = updateLocation(state, updatedLocation);
     nextState = updatePlayer(nextState, player.id, (p) => ({ ...p, mints: p.mints - cost }));
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, player.id),
+      `${player.name} placed ${cost} mint(s) on ${location.name} (space ${payload.spaceIndex + 1}).`,
+    );
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, player.id),
+      `${player.name} used Temp Agency to copy ${targetLocation.name}.`,
+    );
 
     nextState = applyLocationEffect(nextState, player.id, targetLocationId, effect);
 
@@ -112,6 +124,11 @@ export function applyPlaceAction(state: GameState, payload: PlacePayload): GameS
   const updatedLocation = occupyLocationSpace(location, payload.spaceIndex, player.id, cost);
   let nextState = updateLocation(state, updatedLocation);
   nextState = updatePlayer(nextState, player.id, (p) => ({ ...p, mints: p.mints - cost }));
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, player.id),
+    `${player.name} placed ${cost} mint(s) on ${location.name} (space ${payload.spaceIndex + 1}).`,
+  );
 
   nextState = applyLocationEffect(nextState, player.id, payload.locationId, effect);
 
@@ -129,6 +146,15 @@ export function applyPassTurn(state: GameState): GameState {
     ? state.passedPlayers
     : [...state.passedPlayers, state.players[state.currentPlayerIndex].id];
   let nextState = { ...state, passedPlayers };
+
+  if (!alreadyPassed) {
+    const player = state.players[state.currentPlayerIndex];
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, player.id),
+      `${player.name} passes.`,
+    );
+  }
 
   if (passedPlayers.length >= state.players.length) {
     nextState = beginUpkeep(nextState);
@@ -163,6 +189,14 @@ export function resolveCoopChoice(
   nextState = applyMintGain(nextState, playerId, 1);
   nextState = applyMintGain(nextState, targetPlayerId, 1);
   nextState = { ...nextState, pendingChoice: null };
+  nextState = logEvent(
+    nextState,
+    'upkeep',
+    `Co-Op resolved: ${playerName(nextState, playerId)} gives 1 mint to ${playerName(
+      nextState,
+      targetPlayerId,
+    )}.`,
+  );
   nextState = resolveUpkeepQueue(nextState);
   return clearError(nextState);
 }
@@ -174,9 +208,20 @@ export function runAiTurn(state: GameState): GameState {
 
   const action = chooseAiAction(state, player);
   if (!action) {
-    return applyPassTurn(state);
+    const nextState = logEvent(
+      state,
+      'ai',
+      `${player.name} passes (no affordable locations available).`,
+    );
+    return applyPassTurn(nextState);
   }
-  return applyPlaceAction(state, action);
+  let nextState = logEvent(
+    state,
+    'ai',
+    `${player.name} chooses ${locationName(state, action.locationId)} (first affordable in board order).`,
+  );
+  nextState = logAiActionDetails(nextState, player, action);
+  return applyPlaceAction(nextState, action);
 }
 function chooseAiAction(state: GameState, player: PlayerState): PlacePayload | null {
   const locations = state.locations;
@@ -224,7 +269,7 @@ function buildAiActionForLocation(
       return { locationId: location.id, spaceIndex, effect: { kind: 'builder', planId } };
     }
     case 'supplier': {
-      if (player.aiId === 'sonic' && player.plans.length > 0) return null;
+      if (aiSkipsSupplierWithPlans(player.aiId) && player.plans.length > 0) return null;
       const planId = chooseSupplierPlan(state, player);
       if (!planId) return null;
       return { locationId: location.id, spaceIndex, effect: { kind: 'supplier', planId } };
@@ -293,7 +338,7 @@ function chooseTempAgencyTarget(
         return { locationId: location.id, spaceIndex, effect: { kind: 'builder', planId } };
       }
       case 'supplier': {
-        if (player.aiId === 'sonic' && player.plans.length > 0) continue;
+        if (aiSkipsSupplierWithPlans(player.aiId) && player.plans.length > 0) continue;
         const planId = chooseSupplierPlan(state, player);
         if (!planId) continue;
         return { locationId: location.id, spaceIndex, effect: { kind: 'supplier', planId } };
@@ -358,13 +403,12 @@ function chooseSupplierPlan(
   if (supply.length === 0) return null;
 
   const affordable = supply.filter((planId) => {
-    if (player.aiId === 'mort' && isProductionPlan(planId)) return false;
+    if (aiAvoidsProduction(player.aiId) && isProductionPlan(planId)) return false;
     return player.mints >= getSupplierCost(player, planId);
   });
   if (affordable.length === 0) return null;
 
-  const preferHighCost =
-    player.aiId === 'rachael' || player.aiId === 'sonic' || player.aiId === 'mort';
+  const preferHighCost = getAiCostPriority(player.aiId) === 'high';
   const costValues = affordable.map((planId) => getPlanCost(planId));
   const targetCost = preferHighCost ? Math.max(...costValues) : Math.min(...costValues);
   const costFiltered = affordable.filter((planId) => getPlanCost(planId) === targetCost);
@@ -390,23 +434,6 @@ function planTag(planId: PlanId): 'Utility' | 'Deed' | 'Production' | 'Culture' 
   if (isDeedPlan(planId)) return 'Deed';
   if (isProductionPlan(planId)) return 'Production';
   return 'Utility';
-}
-
-function getAiTypePriority(
-  aiId?: AiId,
-): ReadonlyArray<'Utility' | 'Deed' | 'Production' | 'Culture'> {
-  switch (aiId) {
-    case 'justin':
-      return ['Utility', 'Deed', 'Production', 'Culture'];
-    case 'rachael':
-      return ['Production', 'Culture', 'Utility', 'Deed'];
-    case 'sonic':
-      return ['Culture', 'Production', 'Utility', 'Deed'];
-    case 'mort':
-      return ['Utility', 'Deed', 'Culture', 'Production'];
-    default:
-      return ['Utility', 'Deed', 'Production', 'Culture'];
-  }
 }
 
 function validateLocationEffect(
@@ -486,16 +513,30 @@ function applyLocationEffect(
   effect: NonTempPlaceEffect,
 ): GameState {
   switch (locationId) {
-    case 'producer':
-      return applyMintGain(state, playerId, 2);
+    case 'producer': {
+      let nextState = applyMintGain(state, playerId, 2);
+      nextState = logEvent(
+        nextState,
+        actionKindForPlayer(nextState, playerId),
+        `${playerName(nextState, playerId)} gains 2 mints from Producer.`,
+      );
+      return nextState;
+    }
     case 'supplier':
       return gainPlanFromSupplier(state, playerId, (effect as { planId: PlanId }).planId);
     case 'builder':
       return buildPlan(state, playerId, (effect as { planId: PlanId }).planId);
     case 'leadership-council':
       return applyLeadership(state, playerId);
-    case 'wholesaler-location':
-      return applyMintGain(state, playerId, 2);
+    case 'wholesaler-location': {
+      let nextState = applyMintGain(state, playerId, 2);
+      nextState = logEvent(
+        nextState,
+        actionKindForPlayer(nextState, playerId),
+        `${playerName(nextState, playerId)} gains 2 mints from Wholesaler.`,
+      );
+      return nextState;
+    }
     case 'lotto-location':
       return gainPlanFromDeck(state, playerId);
     case 'crowdfunder':
@@ -514,14 +555,29 @@ function applyLocationEffect(
 function applyLeadership(state: GameState, playerId: PlayerId): GameState {
   let nextState: GameState = { ...state, startingPlayerId: playerId };
   nextState = applyMintGain(nextState, playerId, 1);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, playerId),
+    `${playerName(nextState, playerId)} takes the Starting Player token and gains 1 mint.`,
+  );
   return nextState;
 }
 
 function applyCrowdfunder(state: GameState, playerId: PlayerId): GameState {
   let nextState = applyMintGain(state, playerId, 3);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, playerId),
+    `${playerName(nextState, playerId)} gains 3 mints from Crowdfunder.`,
+  );
   for (const player of nextState.players) {
     if (player.id === playerId) continue;
     nextState = applyMintGain(nextState, player.id, 1);
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, playerId),
+      `${player.name} gains 1 mint from Crowdfunder.`,
+    );
   }
   return nextState;
 }
@@ -534,8 +590,18 @@ function gainPlanFromSupplier(state: GameState, playerId: PlayerId, planId: Plan
   if (hasAssembler) {
     nextState = addBuilding(nextState, playerId, planId);
     nextState = openDeedLocationIfNeeded(nextState, playerId, planId);
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, playerId),
+      `${playerName(nextState, playerId)} gains ${planName(planId)} and Assembler auto-builds it.`,
+    );
   } else {
     nextState = addPlan(nextState, playerId, planId);
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, playerId),
+      `${playerName(nextState, playerId)} gains ${planName(planId)} from Supplier.`,
+    );
   }
 
   if (state.settings?.soloMode) {
@@ -550,6 +616,11 @@ function gainPlanFromDeck(state: GameState, playerId: PlayerId): GameState {
   const [top, ...rest] = state.planDeck;
   let nextState: GameState = { ...state, planDeck: rest };
   nextState = addPlan(nextState, playerId, top);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, playerId),
+    `${playerName(nextState, playerId)} draws ${planName(top)} from the Plan Deck.`,
+  );
   return nextState;
 }
 
@@ -557,6 +628,11 @@ function buildPlan(state: GameState, playerId: PlayerId, planId: PlanId): GameSt
   let nextState = removePlan(state, playerId, planId);
   nextState = addBuilding(nextState, playerId, planId);
   nextState = openDeedLocationIfNeeded(nextState, playerId, planId);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, playerId),
+    `${playerName(nextState, playerId)} builds ${planName(planId)}.`,
+  );
   return nextState;
 }
 
@@ -575,6 +651,13 @@ function applyRecycler(
     nextState = removePlan(state, playerId, planId);
     nextState = addPlanToBottomOfDeck(nextState, planId);
     nextState = applyMintGain(nextState, playerId, gain);
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, playerId),
+      `${playerName(nextState, playerId)} recycles ${planName(planId)} for ${gain} mint(s) (cost ${getPlanCost(
+        planId,
+      )} + stars ${starValue}).`,
+    );
     return nextState;
   }
 
@@ -583,9 +666,19 @@ function applyRecycler(
   nextState = removeBuilding(state, playerId, planId);
   nextState = addPlanToBottomOfDeck(nextState, planId);
   nextState = applyMintGain(nextState, playerId, starValue);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, playerId),
+    `${playerName(nextState, playerId)} recycles ${planName(planId)} for ${starValue} mint(s) (stars).`,
+  );
 
   if (building.planId === 'gallery' && building.storedMints > 0) {
     nextState = returnMintsToSupply(nextState, building.storedMints);
+    nextState = logEvent(
+      nextState,
+      actionKindForPlayer(nextState, playerId),
+      `${building.storedMints} mint(s) stored on ${planName(planId)} return to the Mint Supply.`,
+    );
   }
 
   return nextState;
@@ -617,11 +710,23 @@ function applySwapMeet(
     nextState = removeBuilding(nextState, playerId, givePlanId);
     if (building.planId === 'gallery' && building.storedMints > 0) {
       nextState = returnMintsToSupply(nextState, building.storedMints);
+      nextState = logEvent(
+        nextState,
+        actionKindForPlayer(nextState, playerId),
+        `${building.storedMints} mint(s) stored on ${planName(givePlanId)} return to the Mint Supply.`,
+      );
     }
   }
 
   nextState = replacePlanInSupply(nextState, takePlanId, givePlanId);
   nextState = addPlan(nextState, playerId, takePlanId);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, playerId),
+    `${playerName(nextState, playerId)} swaps ${planName(givePlanId)} for ${planName(
+      takePlanId,
+    )} at the Swap Meet.`,
+  );
   return nextState;
 }
 
@@ -652,12 +757,13 @@ function checkRachaelWin(state: GameState): GameState {
       winnerIds: ['ai'],
       tiebreaker: 'tie',
     };
-    return {
+    const nextState: GameState = {
       ...state,
       status: 'lost',
       phase: 'scoring',
       results,
     };
+    return logEvent(nextState, 'system', 'Rachael wins because the Mint Supply is empty.');
   }
   return state;
 }
@@ -707,11 +813,18 @@ function refillPlanSupplyImmediate(state: GameState, count: number): GameState {
   if (state.planDeck.length === 0) return state;
   const toDraw = Math.min(Math.max(0, count), state.planDeck.length);
   const draw = state.planDeck.slice(0, toDraw);
-  return {
+  const nextState = {
     ...state,
     planDeck: state.planDeck.slice(toDraw),
     planSupply: [...state.planSupply, ...draw],
   };
+  if (draw.length === 0) return nextState;
+  const drawNames = draw.map((planId) => planName(planId)).join(', ');
+  return logEvent(
+    nextState,
+    'info',
+    `Solo refill adds ${draw.length} plan(s) to the supply: ${drawNames}.`,
+  );
 }
 
 function openDeedLocationIfNeeded(state: GameState, playerId: PlayerId, planId: PlanId): GameState {
@@ -731,7 +844,13 @@ function updateDeedLocation(
 ): GameState {
   const location = state.locations.find((loc) => loc.id === locationId)!;
   const updated = { ...location, isOpen: true, ownerId };
-  return updateLocation(state, updated);
+  let nextState = updateLocation(state, updated);
+  nextState = logEvent(
+    nextState,
+    actionKindForPlayer(nextState, ownerId),
+    `${playerName(nextState, ownerId)} opens the ${location.name} deed.`,
+  );
+  return nextState;
 }
 
 function getSupplierCost(player: PlayerState, planId: PlanId): number {
@@ -753,13 +872,19 @@ function advanceTurnAfterAction(
       ...nextState,
       lockedLocations: [...new Set([...nextState.lockedLocations, locationId])],
     };
+    nextState = logEvent(
+      nextState,
+      'ai',
+      `${player.name} locks ${locationName(nextState, locationId)} until the next Development phase.`,
+    );
   }
 
   const isSonic = player.type === 'ai' && player.aiId === 'sonic';
   if (isSonic) {
     const usedBonus = state.sonicBonusTurnUsed;
     if (!usedBonus) {
-      return { ...nextState, sonicBonusTurnUsed: true };
+      const logged = logEvent(nextState, 'ai', `${player.name} takes a bonus turn.`);
+      return { ...logged, sonicBonusTurnUsed: true };
     }
     nextState = { ...nextState, sonicBonusTurnUsed: false };
   } else if (state.sonicBonusTurnUsed) {
@@ -778,8 +903,20 @@ function beginUpkeep(state: GameState): GameState {
     lockedLocations: [],
   };
 
+  nextState = logEvent(nextState, 'system', `Upkeep begins (Round ${nextState.round}).`);
+
+  const targetSupply = nextState.settings?.soloMode ? 2 : 3;
+  const cannotRefill = nextState.planSupply.length + nextState.planDeck.length < targetSupply;
+  const hasSevenStars = nextState.players.some((player) => getPlayerTotalStars(player) >= 7);
+
   const endGame = checkEndGame(nextState);
-  if (endGame) return endGame;
+  if (endGame) {
+    const reasons: string[] = [];
+    if (cannotRefill) reasons.push('Plan Supply cannot be refilled');
+    if (hasSevenStars) reasons.push('a player reached 7 stars');
+    const reasonText = reasons.length > 0 ? reasons.join(' and ') : 'end condition met';
+    return logEvent(endGame, 'system', `Game ends because ${reasonText}.`);
+  }
 
   nextState = refillPlanSupplyToSize(nextState);
   nextState = buildUpkeepQueue(nextState);
@@ -792,11 +929,18 @@ function refillPlanSupplyToSize(state: GameState): GameState {
   if (state.planSupply.length >= target) return state;
   const needed = target - state.planSupply.length;
   const draw = state.planDeck.slice(0, needed);
-  return {
+  const nextState = {
     ...state,
     planDeck: state.planDeck.slice(draw.length),
     planSupply: [...state.planSupply, ...draw],
   };
+  if (draw.length === 0) return nextState;
+  const drawNames = draw.map((planId) => planName(planId)).join(', ');
+  return logEvent(
+    nextState,
+    'upkeep',
+    `Plan Supply refilled with ${draw.length} card(s): ${drawNames}.`,
+  );
 }
 
 function buildUpkeepQueue(state: GameState): GameState {
@@ -805,25 +949,54 @@ function buildUpkeepQueue(state: GameState): GameState {
     for (const building of player.buildings) {
       switch (building.planId) {
         case 'stripmine':
-          queue.push({ type: 'GAIN_MINTS', playerId: player.id, amount: 3 });
+          queue.push({
+            type: 'GAIN_MINTS',
+            playerId: player.id,
+            amount: 3,
+            sourcePlanId: building.planId,
+          });
           break;
         case 'coop':
-          queue.push({ type: 'COOP', playerId: player.id });
+          queue.push({ type: 'COOP', playerId: player.id, sourcePlanId: building.planId });
           break;
         case 'corporate-hq':
-          queue.push({ type: 'GAIN_MINTS_PER_BUILDING', playerId: player.id });
+          queue.push({
+            type: 'GAIN_MINTS_PER_BUILDING',
+            playerId: player.id,
+            sourcePlanId: building.planId,
+          });
           break;
         case 'mine':
-          queue.push({ type: 'GAIN_MINTS', playerId: player.id, amount: 1 });
+          queue.push({
+            type: 'GAIN_MINTS',
+            playerId: player.id,
+            amount: 1,
+            sourcePlanId: building.planId,
+          });
           break;
         case 'factory':
-          queue.push({ type: 'GAIN_MINTS', playerId: player.id, amount: 1 });
+          queue.push({
+            type: 'GAIN_MINTS',
+            playerId: player.id,
+            amount: 1,
+            sourcePlanId: building.planId,
+          });
           break;
         case 'plant':
-          queue.push({ type: 'GAIN_MINTS', playerId: player.id, amount: 2 });
+          queue.push({
+            type: 'GAIN_MINTS',
+            playerId: player.id,
+            amount: 2,
+            sourcePlanId: building.planId,
+          });
           break;
         case 'workshop':
-          queue.push({ type: 'GAIN_MINTS', playerId: player.id, amount: 1 });
+          queue.push({
+            type: 'GAIN_MINTS',
+            playerId: player.id,
+            amount: 1,
+            sourcePlanId: building.planId,
+          });
           break;
         case 'gallery':
           queue.push({ type: 'GALLERY', playerId: player.id, planId: building.planId });
@@ -847,22 +1020,53 @@ function resolveUpkeepQueue(state: GameState): GameState {
         ...nextState,
         pendingChoice: { type: 'COOP_TARGET', playerId: effect.playerId },
       };
+      nextState = logEvent(
+        nextState,
+        'upkeep',
+        `${playerName(nextState, effect.playerId)} triggers Co-Op (${planName(
+          effect.sourcePlanId,
+        )}). Choose a target.`,
+      );
       return nextState;
     }
 
     if (effect.type === 'GAIN_MINTS') {
       nextState = applyMintGain(nextState, effect.playerId, effect.amount);
+      nextState = logEvent(
+        nextState,
+        'upkeep',
+        `${playerName(nextState, effect.playerId)} gains ${effect.amount} mint(s) from ${planName(
+          effect.sourcePlanId,
+        )}.`,
+      );
       continue;
     }
 
     if (effect.type === 'GAIN_MINTS_PER_BUILDING') {
       const player = getPlayer(nextState, effect.playerId);
       nextState = applyMintGain(nextState, effect.playerId, player.buildings.length);
+      nextState = logEvent(
+        nextState,
+        'upkeep',
+        `${player.name} gains ${player.buildings.length} mint(s) from ${planName(
+          effect.sourcePlanId,
+        )} (${player.buildings.length} building(s)).`,
+      );
       continue;
     }
 
     if (effect.type === 'GALLERY') {
       nextState = addGalleryMint(nextState, effect.playerId, effect.planId);
+      const gallery = getPlayer(nextState, effect.playerId).buildings.find(
+        (b) => b.planId === effect.planId,
+      );
+      nextState = logEvent(
+        nextState,
+        'upkeep',
+        `${playerName(nextState, effect.playerId)} stores 1 mint on ${planName(
+          effect.planId,
+        )} (now ${gallery?.storedMints ?? 0}).`,
+      );
       continue;
     }
   }
@@ -900,6 +1104,13 @@ function resolveDeedPayouts(state: GameState): GameState {
       if (location.ownerId && location.spaces.some((space) => space.mints > 0)) {
         const payout = location.id === 'wholesaler-location' ? 1 : 2;
         nextState = applyMintGain(nextState, location.ownerId, payout);
+        nextState = logEvent(
+          nextState,
+          'upkeep',
+          `${playerName(nextState, location.ownerId)} gains ${payout} mint(s) from ${
+            location.name
+          } deed payout.`,
+        );
       }
     }
   }
@@ -954,8 +1165,16 @@ function countReturnedMints(state: GameState): number {
 function applyIncome(state: GameState): GameState {
   let nextState = state;
   for (const player of nextState.players) {
-    if (player.type === 'ai' && player.aiId === 'mort') continue;
+    if (player.type === 'ai' && player.aiId === 'mort') {
+      nextState = logEvent(
+        nextState,
+        'upkeep',
+        `${player.name} skips income (Mort ignores income).`,
+      );
+      continue;
+    }
     nextState = applyMintGain(nextState, player.id, 1);
+    nextState = logEvent(nextState, 'upkeep', `${player.name} gains 1 mint from income.`);
   }
   return nextState;
 }
@@ -1088,6 +1307,125 @@ function occupyLocationSpace(
 function getPlayer(state: GameState, playerId: PlayerId): PlayerState {
   const player = state.players.find((p) => p.id === playerId);
   return player!;
+}
+
+function logEvent(state: GameState, kind: GameLogKind, text: string): GameState {
+  return appendLog(state, { kind, text });
+}
+
+function actionKindForPlayer(state: GameState, playerId: PlayerId): GameLogKind {
+  return getPlayer(state, playerId).type === 'ai' ? 'ai' : 'action';
+}
+
+function playerName(state: GameState, playerId: PlayerId): string {
+  return getPlayer(state, playerId).name;
+}
+
+function locationName(state: GameState, locationId: LocationId): string {
+  return state.locations.find((loc) => loc.id === locationId)?.name ?? locationId;
+}
+
+function planName(planId: PlanId): string {
+  return getPlanDefinition(planId).name;
+}
+
+function describeAiSupplierPriority(player: PlayerState): string {
+  const costPreference = getAiCostPriority(player.aiId) === 'high' ? 'highest' : 'lowest';
+  const typePriority = getAiTypePriority(player.aiId).join(' > ');
+  const avoidProduction = aiAvoidsProduction(player.aiId) ? ' (avoids Production plans)' : '';
+  return `Supplier priority: ${costPreference} cost, then ${typePriority}, then closest to deck${avoidProduction}.`;
+}
+
+function logAiActionDetails(
+  state: GameState,
+  player: PlayerState,
+  action: PlacePayload,
+): GameState {
+  let nextState = state;
+  const effect = action.effect;
+
+  if (effect.kind === 'supplier') {
+    nextState = logEvent(nextState, 'ai', describeAiSupplierPriority(player));
+    nextState = logEvent(
+      nextState,
+      'ai',
+      `${player.name} selects ${planName(effect.planId)} from the supply.`,
+    );
+    return nextState;
+  }
+
+  if (effect.kind === 'builder') {
+    nextState = logEvent(
+      nextState,
+      'ai',
+      `${player.name} builds the oldest plan in hand: ${planName(effect.planId)}.`,
+    );
+    return nextState;
+  }
+
+  if (effect.kind === 'recycler') {
+    nextState = logEvent(
+      nextState,
+      'ai',
+      `${player.name} recycles ${planName(effect.targetPlanId)} from ${
+        effect.from === 'plan' ? 'plans' : 'buildings'
+      }.`,
+    );
+    return nextState;
+  }
+
+  if (effect.kind === 'swap-meet') {
+    nextState = logEvent(
+      nextState,
+      'ai',
+      `${player.name} plans to swap ${planName(effect.givePlanId)} for ${planName(
+        effect.takePlanId,
+      )}.`,
+    );
+    return nextState;
+  }
+
+  if (effect.kind === 'temp-agency') {
+    const targetName = locationName(nextState, effect.targetLocationId);
+    nextState = logEvent(
+      nextState,
+      'ai',
+      `${player.name} targets ${targetName} with Temp Agency.`,
+    );
+    if (effect.effect.kind === 'supplier') {
+      nextState = logEvent(nextState, 'ai', describeAiSupplierPriority(player));
+      nextState = logEvent(
+        nextState,
+        'ai',
+        `${player.name} selects ${planName(effect.effect.planId)} from the supply.`,
+      );
+    }
+    if (effect.effect.kind === 'builder') {
+      nextState = logEvent(
+        nextState,
+        'ai',
+        `${player.name} will build ${planName(effect.effect.planId)} via Temp Agency.`,
+      );
+    }
+    if (effect.effect.kind === 'recycler') {
+      nextState = logEvent(
+        nextState,
+        'ai',
+        `${player.name} will recycle ${planName(effect.effect.targetPlanId)} via Temp Agency.`,
+      );
+    }
+    if (effect.effect.kind === 'swap-meet') {
+      nextState = logEvent(
+        nextState,
+        'ai',
+        `${player.name} will swap ${planName(effect.effect.givePlanId)} for ${planName(
+          effect.effect.takePlanId,
+        )} via Temp Agency.`,
+      );
+    }
+  }
+
+  return nextState;
 }
 
 function playerHasBuilding(state: GameState, playerId: PlayerId, planId: PlanId): boolean {
