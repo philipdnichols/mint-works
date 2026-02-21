@@ -45,12 +45,13 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
 
     if (state.log.length > previousLogLength) {
       const newEntries = state.log.slice(previousLogLength);
-      if (newEntries.some((entry) => entry.kind === 'ai')) {
+      const aiEntries = newEntries.filter((entry) => entry.kind === 'ai');
+      if (aiEntries.length > 0) {
         const previousPlayerId = lastPlayerIdRef.current;
         const previousPlayerName = previousPlayerId
           ? state.players.find((player) => player.id === previousPlayerId)?.name
           : null;
-        setAiModalEntries(newEntries);
+        setAiModalEntries(aiEntries);
         setAiModalTitle(previousPlayerName ? `${previousPlayerName}'s Turn` : 'AI Turn');
         setAiModalOpen(true);
       }
