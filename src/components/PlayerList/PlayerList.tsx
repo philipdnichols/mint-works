@@ -1,5 +1,5 @@
 import type { GameState, PlayerState } from '../../types/game';
-import { getBuildingStars, getPlanDefinition } from '../../logic/plans';
+import { getBuildingStars, getPlanDefinition, getPlayerTotalStars } from '../../logic/plans';
 
 interface PlayerListProps {
   state: GameState;
@@ -40,6 +40,7 @@ function PlayerCard({
       </div>
       {isStarting && <div className="badge">Starting Player</div>}
       <div className="player__meta">Mints: {player.mints}</div>
+      <div className="player__meta">Stars: {getPlayerTotalStars(player)}</div>
       <div className="player__meta">Plans (face-down): {player.plans.length}</div>
       <div className="player__section">
         <strong>Buildings</strong>

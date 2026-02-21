@@ -33,16 +33,26 @@ export function Board({ state }: BoardProps) {
       <div className="board__section">
         <h3>Locations</h3>
         <div className="locations">
-          {state.locations.map((location) => (
-            <LocationCard key={location.id} location={location} />
-          ))}
+          {state.locations.map((location) => {
+            const ownerName = location.ownerId
+              ? (state.players.find((player) => player.id === location.ownerId)?.name ??
+                location.ownerId)
+              : null;
+            return <LocationCard key={location.id} location={location} ownerName={ownerName} />;
+          })}
         </div>
       </div>
     </section>
   );
 }
 
-function LocationCard({ location }: { location: LocationState }) {
+function LocationCard({
+  location,
+  ownerName,
+}: {
+  location: LocationState;
+  ownerName: string | null;
+}) {
   const occupied = location.spaces.filter((space) => space.occupiedBy).length;
   const totalMints = location.spaces.reduce((sum, space) => sum + space.mints, 0);
   const effectText = getLocationEffectText(location);
@@ -54,7 +64,7 @@ function LocationCard({ location }: { location: LocationState }) {
         <h4>{location.name}</h4>
         {location.type === 'deed' && !location.isOpen && <span className="badge">Closed</span>}
         {location.type === 'deed' && location.isOpen && (
-          <span className="badge">Owner: {location.ownerId ?? 'None'}</span>
+          <span className="badge">Owner: {ownerName ?? 'None'}</span>
         )}
       </div>
       <div className="location__meta">

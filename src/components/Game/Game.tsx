@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { Dispatch } from 'react';
 import type { GameAction } from '../../state/actions';
-import type { GameState } from '../../types/game';
+import type { GameResults, GameState } from '../../types/game';
 import { Header } from '../Header/Header';
 import { Setup } from '../Setup/Setup';
 import { Board } from '../Board/Board';
@@ -44,6 +44,7 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
             <p>
               Winner(s): {state.results.winnerIds.map((id) => playerName(state, id)).join(', ')}
             </p>
+            <p>Tiebreaker: {formatTiebreaker(state.results.tiebreaker)}</p>
           </section>
         )}
       </main>
@@ -53,4 +54,21 @@ export const Game = memo(function Game({ state, dispatch }: GameProps) {
 
 function playerName(state: GameState, playerId: string): string {
   return state.players.find((player) => player.id === playerId)?.name ?? playerId;
+}
+
+function formatTiebreaker(tiebreaker: GameResults['tiebreaker']): string {
+  switch (tiebreaker) {
+    case 'stars':
+      return 'Most stars';
+    case 'neighborhood':
+      return 'Smallest neighborhood';
+    case 'mints':
+      return 'Most mints';
+    case 'age':
+      return 'Age closest to 42';
+    case 'tie':
+      return 'Still tied';
+    default:
+      return 'Unknown';
+  }
 }
