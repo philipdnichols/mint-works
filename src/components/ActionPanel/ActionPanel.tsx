@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Dispatch } from 'react';
 import type { GameAction, NonTempPlaceEffect, PlaceEffect } from '../../state/actions';
-import type { GameState, LocationId, PlanId, PlayerState } from '../../types/game';
+import type { GameState, LocationId, LocationState, PlanId, PlayerState } from '../../types/game';
 import { getPlanDefinition } from '../../logic/plans';
 import { getLocationCost, getTempAgencyCost } from '../../logic/game';
 
@@ -142,6 +142,15 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
     : null;
   const canPlace = Boolean(
     selectedLocation && openSpaceIndex >= 0 && effect && cost !== null && cost <= player.mints,
+  );
+  const placeHint = getPlaceHint(
+    state,
+    player,
+    selection,
+    selectedLocation,
+    openSpaceIndex,
+    effect,
+    cost,
   );
 
   const handlePlace = () => {
@@ -496,6 +505,14 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
         </div>
       )}
 
+      {placeHint && (
+        <div
+          className={`panel__hint${placeHint.tone === 'warning' ? ' panel__hint--warning' : ''}`}
+        >
+          {placeHint.text}
+        </div>
+      )}
+
       <div className="panel__row">
         <button type="button" onClick={handlePlace} disabled={!canPlace}>
           Place Mint
@@ -504,6 +521,9 @@ export function ActionPanel({ state, dispatch }: ActionPanelProps) {
           Pass
         </button>
       </div>
+      <p className="panel__note">
+        Passing does not end the phase. You can still act later if the turn comes back to you.
+      </p>
     </section>
   );
 }
@@ -608,4 +628,73 @@ function getCostForSelection(
 function planLabel(planId: PlanId): string {
   const plan = getPlanDefinition(planId);
   return `${plan.name} ($${plan.cost})`;
+}
+
+type PlaceHint = { text: string; tone?: 'warning' };
+
+function getPlaceHint(
+  state: GameState,
+  player: PlayerState,
+  selection: SelectionState,
+  selectedLocation: LocationState | undefined,
+  openSpaceIndex: number,
+  effect: PlaceEffect | null,
+  cost: number | null,
+): PlaceHint | null {
+  if (!selectedLocation) {
+    return { text: 'Choose a location to place a mint.' };
+  }
+  if (openSpaceIndex < 0) {
+    return { text: 'No open spaces at this location.', tone: 'warning' };
+  }
+
+  if (!effect) {
+    switch (selectedLocation.id) {
+      case 'supplier':
+        return state.planSupply.length === 0
+          ? { text: 'The plan supply is empty.' }
+          : { text: 'Choose a plan to gain.' };
+      case 'builder':
+        return player.plans.length === 0
+          ? { text: 'You have no plans in hand to build.' }
+          : { text: 'Choose a plan to build.' };
+      case 'recycler':
+        return player.plans.length === 0 && player.buildings.length === 0
+          ? { text: 'You have no cards to recycle.' }
+          : { text: 'Choose a card to recycle.' };
+      case 'swap-meet':
+        if (player.plans.length === 0 && player.buildings.length === 0) {
+          return { text: 'You have no cards to give.' };
+        }
+        return state.planSupply.length === 0
+          ? { text: 'The plan supply is empty.' }
+          : { text: 'Choose a card to give and a plan to take.' };
+      case 'temp-agency': {
+        const occupiedTargets = state.locations.filter(
+          (loc) => loc.id !== 'temp-agency' && loc.spaces.some((space) => space.occupiedBy),
+        );
+        if (occupiedTargets.length === 0) {
+          return { text: 'No occupied locations to target.' };
+        }
+        if (!selection.tempTargetLocationId) {
+          return { text: 'Choose a target occupied location.' };
+        }
+        return { text: 'Choose a plan/card for the copied effect.' };
+      }
+      default:
+        return { text: 'Select any required options to place a mint.' };
+    }
+  }
+
+  if (cost === null) {
+    return { text: 'Cost unavailable for this action.', tone: 'warning' };
+  }
+  if (cost > player.mints) {
+    return {
+      text: `Not enough mints. Need ${cost}, you have ${player.mints}.`,
+      tone: 'warning',
+    };
+  }
+
+  return null;
 }

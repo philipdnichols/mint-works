@@ -23,11 +23,18 @@ export function Setup({ dispatch }: SetupProps) {
   const [playerCount, setPlayerCount] = useState<PlayerCount>(2);
   const [aiId, setAiId] = useState<AiId>('justin');
   const [advancedEnabled, setAdvancedEnabled] = useState(true);
+  const planSupplySize = soloMode ? 2 : 3;
 
+  const advancedConfigs = useMemo(() => getAdvancedLocationConfigs(), []);
   const advancedIds = useMemo(
-    () => getAdvancedLocationConfigs().map((config) => config.id),
-    [],
+    () => advancedConfigs.map((config) => config.id),
+    [advancedConfigs],
   ) as ReadonlyArray<AdvancedLocationId>;
+  const advancedNames = useMemo(
+    () => advancedConfigs.map((config) => config.name),
+    [advancedConfigs],
+  );
+  const advancedCount = advancedEnabled ? (soloMode ? 1 : 2) : 0;
 
   const handleStart = () => {
     const seed = Date.now();
@@ -35,7 +42,6 @@ export function Setup({ dispatch }: SetupProps) {
     const deckOrder = shuffleWithRng(getAllPlanIds(), rng);
 
     const shuffledAdvanced = shuffleWithRng(advancedIds, rng);
-    const advancedCount = advancedEnabled ? (soloMode ? 1 : 2) : 0;
     const advancedLocations = shuffledAdvanced.slice(0, advancedCount);
 
     const settings = {
@@ -53,6 +59,29 @@ export function Setup({ dispatch }: SetupProps) {
   return (
     <section className="setup">
       <h2>Start a Game</h2>
+      <div className="setup__help">
+        <div className="setup__help-card">
+          <h3>Goal</h3>
+          <p>
+            Game ends when someone reaches 7+ stars or the Plan Supply cannot refill to{' '}
+            {planSupplySize}.
+          </p>
+        </div>
+        <div className="setup__help-card">
+          <h3>Your Turn</h3>
+          <ul>
+            <li>Place a mint on a location, pay its cost, and resolve the effect.</li>
+            <li>Or pass. The phase ends after everyone passes in a row.</li>
+          </ul>
+        </div>
+        <div className="setup__help-card">
+          <h3>Phases</h3>
+          <ul>
+            <li>Development: take turns placing or passing.</li>
+            <li>Upkeep: refill supply, resolve buildings, deed payouts, gain 1 mint.</li>
+          </ul>
+        </div>
+      </div>
       <label className="setup__row">
         <input
           type="checkbox"
@@ -99,6 +128,12 @@ export function Setup({ dispatch }: SetupProps) {
         />
         Include advanced locations
       </label>
+      <div className="setup__hint">
+        Advanced locations: {advancedNames.join(', ')}.{' '}
+        {advancedEnabled
+          ? `Using ${advancedCount} randomly selected ${advancedCount === 1 ? 'location' : 'locations'}.`
+          : 'Disabled.'}
+      </div>
 
       <button className="setup__button" type="button" onClick={handleStart}>
         Begin Development

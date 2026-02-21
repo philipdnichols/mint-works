@@ -10,11 +10,12 @@ interface HeaderProps {
 
 export const Header = memo(function Header({ state, dispatch }: HeaderProps) {
   const currentPlayer = state.players[state.currentPlayerIndex];
+  const phaseLabel = state.status === 'idle' ? 'Setup' : formatPhase(state.phase);
   return (
     <header className="header">
       <div className="header__title">Mint Works!</div>
       <div className="header__meta">Round: {state.round}</div>
-      <div className="header__meta">Phase: {state.phase}</div>
+      <div className="header__meta">Phase: {phaseLabel}</div>
       <div className="header__meta">Time: {state.elapsedSeconds}s</div>
       {currentPlayer && <div className="header__meta">Turn: {currentPlayer.name}</div>}
       {state.mintSupply !== 'unlimited' && (
@@ -30,3 +31,16 @@ export const Header = memo(function Header({ state, dispatch }: HeaderProps) {
     </header>
   );
 });
+
+function formatPhase(phase: GameState['phase']): string {
+  switch (phase) {
+    case 'development':
+      return 'Development';
+    case 'upkeep':
+      return 'Upkeep';
+    case 'scoring':
+      return 'Scoring';
+    default:
+      return phase;
+  }
+}

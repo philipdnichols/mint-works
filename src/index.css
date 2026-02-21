@@ -99,10 +99,36 @@ body {
   gap: 16px;
 }
 
+.setup__help {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.setup__help-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid #e4d8c5;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+.setup__help-card h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
 .setup__row {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.setup__hint {
+  font-size: 13px;
+  color: #5b5345;
+  margin-top: -4px;
 }
 
 .setup__button {
@@ -162,6 +188,12 @@ body {
   color: #b46b00;
 }
 
+.card__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b5f4c;
+}
+
 .deck-count {
   margin-top: 12px;
   font-size: 14px;
@@ -191,6 +223,18 @@ body {
 .location__meta {
   font-size: 13px;
   color: #5b5345;
+}
+
+.location__effect {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #3f3526;
+}
+
+.location__hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b5f4c;
 }
 
 .badge {
@@ -228,6 +272,22 @@ body {
 
 .panel__cost {
   font-weight: 600;
+}
+
+.panel__hint {
+  font-size: 13px;
+  color: #5b5345;
+}
+
+.panel__hint--warning {
+  color: #7b2c12;
+  font-weight: 600;
+}
+
+.panel__note {
+  margin: 0;
+  font-size: 12px;
+  color: #6b5f4c;
 }
 
 .players {
