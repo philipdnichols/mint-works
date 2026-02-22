@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { GameAction, NonTempPlaceEffect, PlaceEffect } from '../../state/actions';
 import type { GameState, LocationId, LocationState, PlanId, PlayerState } from '../../types/game';
 import { getAiProfile } from '../../logic/ai';
 import { getPlanDefinition } from '../../logic/plans';
 import { getLocationCost, getTempAgencyCost, getTempAgencyTargets } from '../../logic/game';
+import { RACHAEL_MINT_SUPPLY } from '../../logic/setup';
 import type { SelectionState } from './selection';
 import { initialSelection } from './selection';
 
@@ -24,6 +25,17 @@ export function ActionPanel({
   interactionDisabled,
 }: ActionPanelProps) {
   const player = state.players[state.currentPlayerIndex];
+  const isRachaelSupply =
+    state.settings?.soloMode &&
+    state.settings.aiOpponent === 'rachael' &&
+    state.mintSupply !== 'unlimited';
+  const mintSupplyValue = typeof state.mintSupply === 'number' ? state.mintSupply : 0;
+  const mintSupplyPercent = isRachaelSupply
+    ? Math.max(0, Math.min(100, (mintSupplyValue / RACHAEL_MINT_SUPPLY) * 100))
+    : 0;
+  const [mintSupplyRefill, setMintSupplyRefill] = useState(false);
+  const mintSupplyRef = useRef(state.mintSupply);
+  const refillTimerRef = useRef<number | null>(null);
 
   const availableLocations = useMemo(
     () =>
@@ -37,6 +49,35 @@ export function ActionPanel({
   );
 
   const tempAgencyTargets = useMemo(() => getTempAgencyTargets(state), [state]);
+
+  useEffect(() => {
+    if (!isRachaelSupply) {
+      mintSupplyRef.current = state.mintSupply;
+      setMintSupplyRefill(false);
+      return;
+    }
+
+    const previous = mintSupplyRef.current;
+    if (typeof previous === 'number' && mintSupplyValue > previous) {
+      setMintSupplyRefill(true);
+      if (refillTimerRef.current !== null) {
+        window.clearTimeout(refillTimerRef.current);
+      }
+      refillTimerRef.current = window.setTimeout(() => {
+        setMintSupplyRefill(false);
+      }, 1200);
+    }
+
+    mintSupplyRef.current = state.mintSupply;
+  }, [isRachaelSupply, mintSupplyValue, state.mintSupply]);
+
+  useEffect(() => {
+    return () => {
+      if (refillTimerRef.current !== null) {
+        window.clearTimeout(refillTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!selection.locationId) return;
@@ -209,7 +250,23 @@ export function ActionPanel({
 
   return (
     <section className="panel">
-      <h3>{player.name}'s Turn</h3>
+      <div className="panel__header">
+        <h3>{player.name}'s Turn</h3>
+        {isRachaelSupply && (
+          <div
+            className={`mint-supply${mintSupplyRefill ? ' mint-supply--refill' : ''}`}
+            aria-live="polite"
+          >
+            <div className="mint-supply__label">Mint Supply</div>
+            <div className="mint-supply__meter" aria-hidden="true">
+              <div className="mint-supply__fill" style={{ width: `${mintSupplyPercent}%` }} />
+            </div>
+            <div className="mint-supply__count">
+              {state.mintSupply} / {RACHAEL_MINT_SUPPLY}
+            </div>
+          </div>
+        )}
+      </div>
       {interactionDisabled && (
         <div className="panel__hint panel__hint--warning">
           Recap open. Close it to continue your turn.

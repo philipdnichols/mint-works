@@ -176,67 +176,8 @@ body {
   opacity: 0.8;
 }
 
-.header__right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.header__turn-area {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.header__mint-supply {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border-accent);
-  background: var(--mint-supply-panel);
-  color: var(--text-on-ink);
-  min-width: 170px;
-  box-shadow: inset 0 0 0 1px var(--shadow-ink-soft);
-}
-
-.header__mint-supply--refill {
-  animation: mint-supply-refill 1.2s ease-out;
-}
-
-.header__mint-label {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-.header__mint-meter {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--mint-supply-track);
-  overflow: hidden;
-  position: relative;
-}
-
-.header__mint-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--surface-accent);
-  transition: width 0.35s ease;
-}
-
-.header__mint-count {
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
 .header__actions {
+  margin-left: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -286,6 +227,63 @@ body {
       0 0 0 0 var(--mint-supply-glow-fade);
     transform: translateY(0);
   }
+}
+
+.panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel__header h3 {
+  margin: 0;
+}
+
+.mint-supply {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-accent);
+  background: var(--mint-supply-panel);
+  color: var(--text-primary);
+  min-width: 170px;
+  box-shadow: inset 0 0 0 1px var(--shadow-ink-soft);
+}
+
+.mint-supply--refill {
+  animation: mint-supply-refill 1.2s ease-out;
+}
+
+.mint-supply__label {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted-2);
+}
+
+.mint-supply__meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mint-supply-track);
+  overflow: hidden;
+  position: relative;
+}
+
+.mint-supply__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--surface-accent);
+  transition: width 0.35s ease;
+}
+
+.mint-supply__count {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .game {
@@ -1254,14 +1252,9 @@ body {
     align-items: flex-start;
   }
 
-  .header__right {
+  .header__actions {
     margin-left: 0;
     width: 100%;
-    justify-content: space-between;
-  }
-
-  .header__turn-area {
-    align-items: flex-start;
   }
 
   .alert--results {
