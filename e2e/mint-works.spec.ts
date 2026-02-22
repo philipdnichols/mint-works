@@ -111,7 +111,7 @@ test.describe('Mint Works!', () => {
       logSequence: 0,
     };
     await dispatch(page, { type: '__TEST_LOAD_STATE', state: preset as GameState });
-    await expect(page.getByText(/results/i)).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Game results' })).toBeVisible();
   });
 
   test('shows temp agency warning when no occupied locations exist', async ({ page }) => {
@@ -449,9 +449,13 @@ test.describe('Mint Works!', () => {
     }));
 
     await page.getByRole('button', { name: 'Pass' }).click();
-    await expect(page.getByText('Results')).toBeVisible();
-    await expect(page.getByText('Winner(s): Player 1')).toBeVisible();
-    await expect(page.getByText('Tiebreaker: Most stars')).toBeVisible();
+    const resultsDialog = page.getByRole('dialog', { name: 'Game results' });
+    await expect(resultsDialog).toBeVisible();
+    const winnerCard = resultsDialog.getByText('Winner').locator('..');
+    await expect(winnerCard).toBeVisible();
+    await expect(winnerCard.getByText('Player 1')).toBeVisible();
+    await expect(resultsDialog.getByText('Tiebreaker')).toBeVisible();
+    await expect(resultsDialog.getByText('Most stars')).toBeVisible();
   });
 
   test('ends the game when the supply cannot refill', async ({ page }) => {
@@ -474,8 +478,11 @@ test.describe('Mint Works!', () => {
     }));
 
     await page.getByRole('button', { name: 'Pass' }).click();
-    await expect(page.getByText('Results')).toBeVisible();
-    await expect(page.getByText('Tiebreaker: Still tied')).toBeVisible();
+    const resultsDialog = page.getByRole('dialog', { name: 'Game results' });
+    await expect(resultsDialog).toBeVisible();
+    await expect(resultsDialog.getByText('Winners')).toBeVisible();
+    await expect(resultsDialog.getByText('Tiebreaker')).toBeVisible();
+    await expect(resultsDialog.getByText('Still tied')).toBeVisible();
   });
 
   test('awards deed payouts during upkeep', async ({ page }) => {

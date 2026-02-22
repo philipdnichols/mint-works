@@ -1552,6 +1552,63 @@ describe('game logic', () => {
     expect(tempAgency.spaces.some((space) => space.occupiedBy === 'ai')).toBe(true);
   });
 
+  it('ai temp agency logs recycler target details', () => {
+    const deck = buildDeck();
+    let state = startGame(
+      { ...baseSettings(), advancedLocations: ['temp-agency', 'recycler'] as const },
+      deck,
+    );
+    state = withPlayer(state, 'p1', (player) => ({
+      ...player,
+      type: 'ai',
+      aiId: 'justin',
+      mints: 5,
+      plans: ['gardens'],
+    }));
+    state = setCurrentPlayer(state, 'p1');
+    state = fillLocation(state, 'recycler', 'p2');
+    const unlocked = new Set<LocationId>(['temp-agency', 'recycler']);
+    state = {
+      ...state,
+      lockedLocations: state.locations
+        .filter((location) => !unlocked.has(location.id))
+        .map((location) => location.id),
+    };
+    const next = runAiTurn(state);
+    const logText = next.log.map((entry) => entry.text).join(' ');
+    expect(logText).toContain('Temp Agency');
+    expect(logText).toContain('will recycle');
+  });
+
+  it('ai temp agency logs swap meet target details', () => {
+    const deck = buildDeck();
+    let state = startGame(
+      { ...baseSettings(), advancedLocations: ['temp-agency', 'swap-meet'] as const },
+      deck,
+    );
+    state = withPlayer(state, 'p1', (player) => ({
+      ...player,
+      type: 'ai',
+      aiId: 'justin',
+      mints: 10,
+      plans: ['gardens'],
+    }));
+    state = setCurrentPlayer(state, 'p1');
+    state = { ...state, planSupply: ['truck'] };
+    state = fillLocation(state, 'swap-meet', 'p2');
+    const unlocked = new Set<LocationId>(['temp-agency', 'swap-meet']);
+    state = {
+      ...state,
+      lockedLocations: state.locations
+        .filter((location) => !unlocked.has(location.id))
+        .map((location) => location.id),
+    };
+    const next = runAiTurn(state);
+    const logText = next.log.map((entry) => entry.text).join(' ');
+    expect(logText).toContain('Temp Agency');
+    expect(logText).toContain('will swap');
+  });
+
   it('reports invalid plan choices for builder, supplier, recycler, and swap meet', () => {
     const deck = buildDeck();
     let state = startGame(baseSettings(), deck);

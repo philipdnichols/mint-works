@@ -239,6 +239,36 @@ body {
   color: var(--text-primary);
 }
 
+.alert--results {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.alert__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alert__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert__button {
+  background: var(--surface-ink);
+  color: var(--text-on-ink);
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .setup {
   display: flex;
   flex-direction: column;
@@ -1033,8 +1063,74 @@ body {
   cursor: pointer;
 }
 
-.results ul {
-  padding-left: 16px;
+.modal__button--secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-base);
+}
+
+.results-modal__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.results-modal__card {
+  border: 1px solid var(--border-base);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface-card);
+}
+
+.results-modal__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted-2);
+  margin-bottom: 6px;
+}
+
+.results-modal__value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.results-modal__scores {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.results-modal__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.results-modal__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border-base);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-card);
+  font-weight: 600;
+}
+
+.results-modal__row--winner {
+  border-color: var(--border-accent);
+  background: var(--surface-log-ai);
+}
+
+.results-modal__stars {
+  color: var(--text-primary);
 }
 
 @media (max-width: 900px) {
@@ -1056,5 +1152,10 @@ body {
   .header__actions {
     margin-left: 0;
     width: 100%;
+  }
+
+  .alert--results {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

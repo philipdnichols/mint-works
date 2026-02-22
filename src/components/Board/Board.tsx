@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState, LocationCost, LocationId, LocationState, PlanId } from '../../types/game';
 import { getPlanDefinition, getPlanEffect, getPlanStarInfo } from '../../logic/plans';
 import type { SelectionState } from '../ActionPanel/selection';
@@ -8,13 +8,31 @@ interface BoardProps {
   selection: SelectionState;
   selectionEnabled: boolean;
   onSelectSpace: (locationId: LocationId, spaceIndex: number) => void;
+  suspendRefillAnimation: boolean;
 }
 
-export function Board({ state, selection, selectionEnabled, onSelectSpace }: BoardProps) {
+export function Board({
+  state,
+  selection,
+  selectionEnabled,
+  onSelectSpace,
+  suspendRefillAnimation,
+}: BoardProps) {
   const nameMap = new Map<string, string>(state.players.map((player) => [player.id, player.name]));
   const [replenishedPlanIds, setReplenishedPlanIds] = useState<ReadonlyArray<PlanId>>([]);
+  const [pendingPlanIds, setPendingPlanIds] = useState<ReadonlyArray<PlanId>>([]);
   const previousSupplyRef = useRef<ReadonlyArray<PlanId>>(state.planSupply);
   const refillTimerRef = useRef<number | null>(null);
+
+  const triggerRefillAnimation = useCallback((planIds: ReadonlyArray<PlanId>) => {
+    setReplenishedPlanIds(planIds);
+    if (refillTimerRef.current !== null) {
+      window.clearTimeout(refillTimerRef.current);
+    }
+    refillTimerRef.current = window.setTimeout(() => {
+      setReplenishedPlanIds([]);
+    }, 1200);
+  }, []);
 
   useEffect(() => {
     const previousSupply = previousSupplyRef.current;
@@ -22,17 +40,25 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
     const addedPlans = state.planSupply.filter((planId) => !previousSet.has(planId));
 
     if (addedPlans.length > 0) {
-      setReplenishedPlanIds(addedPlans);
-      if (refillTimerRef.current !== null) {
-        window.clearTimeout(refillTimerRef.current);
+      if (suspendRefillAnimation) {
+        setPendingPlanIds((current) => {
+          const merged = new Set([...current, ...addedPlans]);
+          return Array.from(merged);
+        });
+      } else {
+        triggerRefillAnimation(addedPlans);
       }
-      refillTimerRef.current = window.setTimeout(() => {
-        setReplenishedPlanIds([]);
-      }, 1200);
     }
 
     previousSupplyRef.current = state.planSupply;
-  }, [state.planSupply]);
+  }, [state.planSupply, suspendRefillAnimation, triggerRefillAnimation]);
+
+  useEffect(() => {
+    if (suspendRefillAnimation) return;
+    if (pendingPlanIds.length === 0) return;
+    triggerRefillAnimation(pendingPlanIds);
+    setPendingPlanIds([]);
+  }, [pendingPlanIds, suspendRefillAnimation, triggerRefillAnimation]);
 
   useEffect(() => {
     return () => {
@@ -46,6 +72,11 @@ export function Board({ state, selection, selectionEnabled, onSelectSpace }: Boa
     <section className="board">
       <div className="board__section">
         <h3>Plan Supply</h3>
+        {state.settings?.soloMode && state.settings.aiOpponent === 'rachael' && (
+          <p className="board__hint">
+            Rachael variant: Mint supply is limited (30 total). If it reaches 0, Rachael wins.
+          </p>
+        )}
         <div className="plan-supply">
           {state.planSupply.length === 0 && <p>No plans available.</p>}
           {state.planSupply.map((planId) => {

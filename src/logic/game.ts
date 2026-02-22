@@ -16,7 +16,7 @@ import {
   getAiCostPriority,
   getAiTypePriority,
 } from './ai';
-import { appendLog } from './log';
+import { appendLog, appendLogs } from './log';
 import {
   countCultureBuildings,
   getBuildingStars,
@@ -756,6 +756,7 @@ function returnMintsToSupply(state: GameState, amount: number): GameState {
 
 function checkRachaelWin(state: GameState): GameState {
   if (!state.settings?.soloMode || state.settings.aiOpponent !== 'rachael') return state;
+  if (state.status !== 'playing') return state;
   if (state.mintSupply !== 'unlimited' && state.mintSupply <= 0) {
     const results: GameResults = {
       scores: state.players.map((p) => ({ playerId: p.id, stars: getPlayerTotalStars(p) })),
@@ -768,7 +769,8 @@ function checkRachaelWin(state: GameState): GameState {
       phase: 'scoring',
       results,
     };
-    return logEvent(nextState, 'system', 'Rachael wins because the Mint Supply is empty.');
+    const logged = logEvent(nextState, 'system', 'Rachael wins because the Mint Supply is empty.');
+    return logResultsSummary(logged);
   }
   return state;
 }
@@ -920,7 +922,8 @@ function beginUpkeep(state: GameState): GameState {
     if (cannotRefill) reasons.push('Plan Supply cannot be refilled');
     if (hasSevenStars) reasons.push('a player reached 7 stars');
     const reasonText = reasons.length > 0 ? reasons.join(' and ') : 'end condition met';
-    return logEvent(endGame, 'system', `Game ends because ${reasonText}.`);
+    const logged = logEvent(endGame, 'system', `Game ends because ${reasonText}.`);
+    return logResultsSummary(logged);
   }
 
   nextState = refillPlanSupplyToSize(nextState);
@@ -1332,6 +1335,40 @@ function locationName(state: GameState, locationId: LocationId): string {
 
 function planName(planId: PlanId): string {
   return getPlanDefinition(planId).name;
+}
+
+function logResultsSummary(state: GameState): GameState {
+  if (!state.results) return state;
+  const winnerLabel = state.results.winnerIds.length === 1 ? 'Winner' : 'Winners';
+  const winnerNames = state.results.winnerIds.map((id) => playerName(state, id)).join(', ');
+  const sortedScores = [...state.results.scores].sort((a, b) => b.stars - a.stars);
+  const scoreLine = sortedScores
+    .map((score) => `${playerName(state, score.playerId)} ${score.stars}`)
+    .join(', ');
+  const tiebreaker = formatTiebreaker(state.results.tiebreaker);
+
+  return appendLogs(state, [
+    { kind: 'system', text: `Results: ${winnerLabel} ${winnerNames}.` },
+    { kind: 'system', text: `Final stars: ${scoreLine}.` },
+    { kind: 'system', text: `Tiebreaker: ${tiebreaker}.` },
+  ]);
+}
+
+function formatTiebreaker(tiebreaker: GameResults['tiebreaker']): string {
+  switch (tiebreaker) {
+    case 'stars':
+      return 'Most stars';
+    case 'neighborhood':
+      return 'Smallest neighborhood';
+    case 'mints':
+      return 'Most mints';
+    case 'age':
+      return 'Age closest to 42';
+    case 'tie':
+      return 'Still tied';
+    default:
+      return 'Unknown';
+  }
 }
 
 function describeAiSupplierPriority(player: PlayerState): string {
