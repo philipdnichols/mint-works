@@ -178,7 +178,23 @@ export function ActionPanel({
       : null;
     return (
       <section className="panel">
-        <h3>{player.name} (AI)</h3>
+        <div className="panel__header">
+          <h3>{player.name} (AI)</h3>
+          {isRachaelSupply && (
+            <div
+              className={`mint-supply${mintSupplyRefill ? ' mint-supply--refill' : ''}`}
+              aria-live="polite"
+            >
+              <div className="mint-supply__label">Mint Supply</div>
+              <div className="mint-supply__meter" aria-hidden="true">
+                <div className="mint-supply__fill" style={{ width: `${mintSupplyPercent}%` }} />
+              </div>
+              <div className="mint-supply__count">
+                {state.mintSupply} / {RACHAEL_MINT_SUPPLY}
+              </div>
+            </div>
+          )}
+        </div>
         {profile && (
           <div className="panel__ai">
             <div className="panel__ai-title">{profile.title}</div>
