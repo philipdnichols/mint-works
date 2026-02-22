@@ -54,6 +54,19 @@ export function Board({
   }, [state.planSupply, suspendRefillAnimation, triggerRefillAnimation]);
 
   useEffect(() => {
+    if (!suspendRefillAnimation) return;
+    if (replenishedPlanIds.length === 0) return;
+    setPendingPlanIds((current) => {
+      const merged = new Set([...current, ...replenishedPlanIds]);
+      return Array.from(merged);
+    });
+    setReplenishedPlanIds([]);
+    if (refillTimerRef.current !== null) {
+      window.clearTimeout(refillTimerRef.current);
+    }
+  }, [replenishedPlanIds, suspendRefillAnimation]);
+
+  useEffect(() => {
     if (suspendRefillAnimation) return;
     if (pendingPlanIds.length === 0) return;
     triggerRefillAnimation(pendingPlanIds);
