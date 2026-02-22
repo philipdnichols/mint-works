@@ -1146,6 +1146,13 @@ function clearLocations(state: GameState): GameState {
   if (state.mintSupply !== 'unlimited') {
     const returned = countReturnedMints(state);
     nextState = { ...nextState, mintSupply: state.mintSupply + returned };
+    if (returned > 0) {
+      nextState = logEvent(
+        nextState,
+        'upkeep',
+        `${returned} mint(s) return to the Mint Supply from cleared locations.`,
+      );
+    }
     nextState = checkRachaelWin(nextState);
   }
   return nextState;

@@ -1,4 +1,5 @@
 import type { AiId, PlanTag } from '../types/game';
+import { RACHAEL_MINT_SUPPLY } from './setup';
 
 export interface AiProfile {
   readonly id: AiId;
@@ -29,7 +30,7 @@ const AI_PROFILES: Record<AiId, AiProfile> = {
     title: 'The Keeper',
     startingMints: 5,
     traits: [
-      'Mint supply is limited to 30.',
+      `Mint supply is limited to ${RACHAEL_MINT_SUPPLY}.`,
       'Supplier mints used by Rachael leave the game during Upkeep.',
       'Rachael wins if the Mint Supply is ever empty.',
     ],

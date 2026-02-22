@@ -52,6 +52,10 @@
 
   --header-ghost-border: rgba(255, 255, 255, 0.4);
   --header-ghost-hover: rgba(255, 255, 255, 0.12);
+  --mint-supply-panel: rgba(255, 255, 255, 0.08);
+  --mint-supply-track: rgba(255, 255, 255, 0.18);
+  --mint-supply-glow: rgba(242, 193, 78, 0.45);
+  --mint-supply-glow-fade: rgba(242, 193, 78, 0);
 
   color-scheme: light;
   font-family: 'Georgia', 'Times New Roman', serif;
@@ -115,6 +119,10 @@
 
   --header-ghost-border: rgba(255, 255, 255, 0.5);
   --header-ghost-hover: rgba(255, 255, 255, 0.16);
+  --mint-supply-panel: rgba(255, 255, 255, 0.06);
+  --mint-supply-track: rgba(255, 255, 255, 0.12);
+  --mint-supply-glow: rgba(242, 193, 78, 0.55);
+  --mint-supply-glow-fade: rgba(242, 193, 78, 0);
 
   color-scheme: dark;
 }
@@ -168,6 +176,51 @@ body {
   opacity: 0.8;
 }
 
+.header__mint-supply {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-accent);
+  background: var(--mint-supply-panel);
+  color: var(--text-on-ink);
+  min-width: 170px;
+  box-shadow: inset 0 0 0 1px var(--shadow-ink-soft);
+}
+
+.header__mint-supply--refill {
+  animation: mint-supply-refill 1.2s ease-out;
+}
+
+.header__mint-label {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.header__mint-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--mint-supply-track);
+  overflow: hidden;
+  position: relative;
+}
+
+.header__mint-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--surface-accent);
+  transition: width 0.35s ease;
+}
+
+.header__mint-count {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .header__actions {
   margin-left: auto;
   display: flex;
@@ -198,6 +251,27 @@ body {
 .header__button--ghost:hover {
   background: var(--header-ghost-hover);
   filter: none;
+}
+
+@keyframes mint-supply-refill {
+  0% {
+    box-shadow:
+      inset 0 0 0 1px var(--shadow-ink-soft),
+      0 0 0 0 var(--mint-supply-glow);
+    transform: translateY(0);
+  }
+  40% {
+    box-shadow:
+      inset 0 0 0 1px var(--shadow-ink-soft),
+      0 0 0 12px var(--mint-supply-glow);
+    transform: translateY(-1px);
+  }
+  100% {
+    box-shadow:
+      inset 0 0 0 1px var(--shadow-ink-soft),
+      0 0 0 0 var(--mint-supply-glow-fade);
+    transform: translateY(0);
+  }
 }
 
 .game {

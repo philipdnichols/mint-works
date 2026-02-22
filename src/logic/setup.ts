@@ -2,6 +2,8 @@ import type { AiId, GameSettings, GameState, PlayerId, PlayerState, PlanId } fro
 import { buildLocations } from './locations';
 import { appendLogs } from './log';
 
+export const RACHAEL_MINT_SUPPLY = 30;
+
 const ALL_PLAN_IDS: ReadonlyArray<PlanId> = [
   'assembler',
   'gardens',
@@ -77,7 +79,7 @@ export function startGame(settings: GameSettings, deckOrder: ReadonlyArray<PlanI
   const startingPlayerId = getStartingPlayerId(settings, players);
 
   let mintSupply: number | 'unlimited' =
-    settings.soloMode && settings.aiOpponent === 'rachael' ? 30 : 'unlimited';
+    settings.soloMode && settings.aiOpponent === 'rachael' ? RACHAEL_MINT_SUPPLY : 'unlimited';
 
   if (mintSupply !== 'unlimited') {
     mintSupply = Math.max(0, mintSupply - players.reduce((sum, p) => sum + p.mints, 0));

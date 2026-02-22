@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState, LocationCost, LocationId, LocationState, PlanId } from '../../types/game';
 import { getPlanDefinition, getPlanEffect, getPlanStarInfo } from '../../logic/plans';
+import { RACHAEL_MINT_SUPPLY } from '../../logic/setup';
 import type { SelectionState } from '../ActionPanel/selection';
 
 interface BoardProps {
@@ -91,7 +92,8 @@ export function Board({
         <h3>Plan Supply</h3>
         {state.settings?.soloMode && state.settings.aiOpponent === 'rachael' && (
           <p className="board__hint">
-            Rachael variant: Mint supply is limited (30 total). If it reaches 0, Rachael wins.
+            Rachael variant: Mint supply is limited ({RACHAEL_MINT_SUPPLY} total). If it reaches 0,
+            Rachael wins.
           </p>
         )}
         <div className="plan-supply">
