@@ -176,6 +176,21 @@ body {
   opacity: 0.8;
 }
 
+.header__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header__turn-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
 .header__mint-supply {
   display: flex;
   flex-direction: column;
@@ -222,7 +237,6 @@ body {
 }
 
 .header__actions {
-  margin-left: auto;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1240,9 +1254,14 @@ body {
     align-items: flex-start;
   }
 
-  .header__actions {
+  .header__right {
     margin-left: 0;
     width: 100%;
+    justify-content: space-between;
+  }
+
+  .header__turn-area {
+    align-items: flex-start;
   }
 
   .alert--results {

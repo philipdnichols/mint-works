@@ -63,36 +63,44 @@ export const Header = memo(function Header({ state, dispatch, theme, onToggleThe
       <div className="header__meta">Round: {state.round}</div>
       <div className="header__meta">Phase: {phaseLabel}</div>
       <div className="header__meta">Time: {state.elapsedSeconds}s</div>
-      {currentPlayer && <div className="header__meta">Turn: {currentPlayer.name}</div>}
-      {isRachaelSupply && (
-        <div
-          className={`header__mint-supply${mintSupplyRefill ? ' header__mint-supply--refill' : ''}`}
-        >
-          <div className="header__mint-label">Mint Supply</div>
-          <div className="header__mint-meter" aria-hidden="true">
-            <div className="header__mint-fill" style={{ width: `${mintSupplyPercent}%` }} />
+      <div className="header__right">
+        {(currentPlayer || isRachaelSupply) && (
+          <div className="header__turn-area">
+            {currentPlayer && <div className="header__meta">Turn: {currentPlayer.name}</div>}
+            {isRachaelSupply && (
+              <div
+                className={`header__mint-supply${
+                  mintSupplyRefill ? ' header__mint-supply--refill' : ''
+                }`}
+              >
+                <div className="header__mint-label">Mint Supply</div>
+                <div className="header__mint-meter" aria-hidden="true">
+                  <div className="header__mint-fill" style={{ width: `${mintSupplyPercent}%` }} />
+                </div>
+                <div className="header__mint-count" role="status" aria-live="polite">
+                  {state.mintSupply} / {RACHAEL_MINT_SUPPLY}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="header__mint-count" role="status" aria-live="polite">
-            {state.mintSupply} / {RACHAEL_MINT_SUPPLY}
-          </div>
+        )}
+        <div className="header__actions">
+          <button
+            type="button"
+            className="header__button header__button--ghost"
+            aria-pressed={theme === 'dark'}
+            onClick={onToggleTheme}
+          >
+            {themeLabel}
+          </button>
+          <button
+            type="button"
+            className="header__button"
+            onClick={() => dispatch({ type: 'NEW_GAME' })}
+          >
+            New Game
+          </button>
         </div>
-      )}
-      <div className="header__actions">
-        <button
-          type="button"
-          className="header__button header__button--ghost"
-          aria-pressed={theme === 'dark'}
-          onClick={onToggleTheme}
-        >
-          {themeLabel}
-        </button>
-        <button
-          type="button"
-          className="header__button"
-          onClick={() => dispatch({ type: 'NEW_GAME' })}
-        >
-          New Game
-        </button>
       </div>
     </header>
   );
