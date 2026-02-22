@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { GameAction, NonTempPlaceEffect, PlaceEffect } from '../../state/actions';
 import type { GameState, LocationId, LocationState, PlanId, PlayerState } from '../../types/game';
@@ -15,6 +15,7 @@ interface ActionPanelProps {
   selection: SelectionState;
   setSelection: Dispatch<SetStateAction<SelectionState>>;
   interactionDisabled: boolean;
+  suspendMintSupplyAnimation: boolean;
 }
 
 export function ActionPanel({
@@ -23,6 +24,7 @@ export function ActionPanel({
   selection,
   setSelection,
   interactionDisabled,
+  suspendMintSupplyAnimation,
 }: ActionPanelProps) {
   const player = state.players[state.currentPlayerIndex];
   const isRachaelSupply =
@@ -34,8 +36,32 @@ export function ActionPanel({
     ? Math.max(0, Math.min(100, (mintSupplyValue / RACHAEL_MINT_SUPPLY) * 100))
     : 0;
   const [mintSupplyRefill, setMintSupplyRefill] = useState(false);
+  const [mintSupplyDelta, setMintSupplyDelta] = useState<number | null>(null);
   const mintSupplyRef = useRef(state.mintSupply);
+  const pendingDeltaRef = useRef(0);
   const refillTimerRef = useRef<number | null>(null);
+  const deltaTimerRef = useRef<number | null>(null);
+
+  const triggerMintSupplyAnimation = useCallback((delta: number) => {
+    if (delta === 0) return;
+    setMintSupplyDelta(delta);
+    if (deltaTimerRef.current !== null) {
+      window.clearTimeout(deltaTimerRef.current);
+    }
+    deltaTimerRef.current = window.setTimeout(() => {
+      setMintSupplyDelta(null);
+    }, 1200);
+
+    if (delta > 0) {
+      setMintSupplyRefill(true);
+      if (refillTimerRef.current !== null) {
+        window.clearTimeout(refillTimerRef.current);
+      }
+      refillTimerRef.current = window.setTimeout(() => {
+        setMintSupplyRefill(false);
+      }, 1200);
+    }
+  }, []);
 
   const availableLocations = useMemo(
     () =>
@@ -53,28 +79,52 @@ export function ActionPanel({
   useEffect(() => {
     if (!isRachaelSupply) {
       mintSupplyRef.current = state.mintSupply;
+      pendingDeltaRef.current = 0;
       setMintSupplyRefill(false);
+      setMintSupplyDelta(null);
       return;
     }
 
+    if (!suspendMintSupplyAnimation && pendingDeltaRef.current !== 0) {
+      const queuedDelta = pendingDeltaRef.current;
+      pendingDeltaRef.current = 0;
+      triggerMintSupplyAnimation(queuedDelta);
+    }
+
     const previous = mintSupplyRef.current;
-    if (typeof previous === 'number' && mintSupplyValue > previous) {
-      setMintSupplyRefill(true);
-      if (refillTimerRef.current !== null) {
-        window.clearTimeout(refillTimerRef.current);
-      }
-      refillTimerRef.current = window.setTimeout(() => {
-        setMintSupplyRefill(false);
-      }, 1200);
+    if (typeof previous !== 'number') {
+      mintSupplyRef.current = state.mintSupply;
+      return;
+    }
+
+    const delta = mintSupplyValue - previous;
+    if (delta === 0) {
+      mintSupplyRef.current = state.mintSupply;
+      return;
+    }
+
+    if (suspendMintSupplyAnimation) {
+      pendingDeltaRef.current += delta;
+    } else {
+      triggerMintSupplyAnimation(delta);
     }
 
     mintSupplyRef.current = state.mintSupply;
-  }, [isRachaelSupply, mintSupplyValue, state.mintSupply]);
+  }, [
+    isRachaelSupply,
+    mintSupplyValue,
+    state.mintSupply,
+    suspendMintSupplyAnimation,
+    triggerMintSupplyAnimation,
+  ]);
 
   useEffect(() => {
     return () => {
       if (refillTimerRef.current !== null) {
         window.clearTimeout(refillTimerRef.current);
+      }
+      if (deltaTimerRef.current !== null) {
+        window.clearTimeout(deltaTimerRef.current);
       }
     };
   }, []);
@@ -189,6 +239,17 @@ export function ActionPanel({
               <div className="mint-supply__meter" aria-hidden="true">
                 <div className="mint-supply__fill" style={{ width: `${mintSupplyPercent}%` }} />
               </div>
+              {mintSupplyDelta !== null && (
+                <div
+                  className={`mint-supply__delta ${
+                    mintSupplyDelta > 0
+                      ? 'mint-supply__delta--positive'
+                      : 'mint-supply__delta--negative'
+                  }`}
+                >
+                  {mintSupplyDelta > 0 ? `+${mintSupplyDelta}` : mintSupplyDelta}
+                </div>
+              )}
               <div className="mint-supply__count">
                 {state.mintSupply} / {RACHAEL_MINT_SUPPLY}
               </div>
@@ -277,6 +338,17 @@ export function ActionPanel({
             <div className="mint-supply__meter" aria-hidden="true">
               <div className="mint-supply__fill" style={{ width: `${mintSupplyPercent}%` }} />
             </div>
+            {mintSupplyDelta !== null && (
+              <div
+                className={`mint-supply__delta ${
+                  mintSupplyDelta > 0
+                    ? 'mint-supply__delta--positive'
+                    : 'mint-supply__delta--negative'
+                }`}
+              >
+                {mintSupplyDelta > 0 ? `+${mintSupplyDelta}` : mintSupplyDelta}
+              </div>
+            )}
             <div className="mint-supply__count">
               {state.mintSupply} / {RACHAEL_MINT_SUPPLY}
             </div>

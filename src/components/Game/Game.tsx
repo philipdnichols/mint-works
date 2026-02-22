@@ -162,6 +162,7 @@ export const Game = memo(function Game({ state, dispatch, theme, onToggleTheme }
                   selection={selection}
                   setSelection={setSelection}
                   interactionDisabled={aiModalOpen || upkeepModalOpen}
+                  suspendMintSupplyAnimation={aiModalOpen || upkeepModalOpen || resultsModalOpen}
                 />
                 <NeighborhoodSummary state={state} />
                 <GameLog log={state.log} />
