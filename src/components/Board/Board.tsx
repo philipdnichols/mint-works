@@ -23,6 +23,10 @@ export function Board({
   const [pendingPlanIds, setPendingPlanIds] = useState<ReadonlyArray<PlanId>>([]);
   const previousSupplyRef = useRef<ReadonlyArray<PlanId>>(state.planSupply);
   const refillTimerRef = useRef<number | null>(null);
+  const visiblePlanSupply = suspendRefillAnimation
+    ? state.planSupply.filter((planId) => !pendingPlanIds.includes(planId))
+    : state.planSupply;
+  const placeholderCount = suspendRefillAnimation ? pendingPlanIds.length : 0;
 
   const triggerRefillAnimation = useCallback((planIds: ReadonlyArray<PlanId>) => {
     setReplenishedPlanIds(planIds);
@@ -92,7 +96,7 @@ export function Board({
         )}
         <div className="plan-supply">
           {state.planSupply.length === 0 && <p>No plans available.</p>}
-          {state.planSupply.map((planId) => {
+          {visiblePlanSupply.map((planId) => {
             const plan = getPlanDefinition(planId);
             const starInfo = getPlanStarInfo(planId);
             const starRule = starInfo.hint ?? 'Printed stars.';
@@ -112,6 +116,16 @@ export function Board({
               </div>
             );
           })}
+          {placeholderCount > 0 &&
+            Array.from({ length: placeholderCount }).map((_, index) => (
+              <div
+                key={`placeholder-${index}`}
+                className="card card--placeholder"
+                aria-hidden="true"
+              >
+                <div className="card__placeholder">Refill pending</div>
+              </div>
+            ))}
         </div>
         <p className="deck-count">Plan Deck: {state.planDeck.length} cards</p>
       </div>
